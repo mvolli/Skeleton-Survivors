@@ -1027,8 +1027,8 @@ class BasicSkeletonEnemy {
         this.y = y;
         this.radius = 25;
         this.speed = 50;
-        this.health = 35;
-        this.maxHealth = 35;
+        this.health = 60;
+        this.maxHealth = 60;
         this.scoreValue = 10;
         this.expValue = 8; // Reduced from 15 for better balance
         this.scale = 1.2;
@@ -1119,8 +1119,8 @@ class FastSkeletonEnemy extends BasicSkeletonEnemy {
     constructor(x, y, assets) {
         super(x, y, assets);
         this.speed = 100;
-        this.health = 18;
-        this.maxHealth = 18;
+        this.health = 40;
+        this.maxHealth = 40;
         this.radius = 22;
         this.scoreValue = 15;
         this.expValue = 6; // Reduced from 12 for better balance
@@ -1132,8 +1132,8 @@ class TankSkeletonEnemy extends BasicSkeletonEnemy {
     constructor(x, y, assets) {
         super(x, y, assets);
         this.speed = 25;
-        this.health = 80;
-        this.maxHealth = 80;
+        this.health = 120;
+        this.maxHealth = 120;
         this.radius = 35;
         this.scoreValue = 30;
         this.expValue = 15; // Reduced from 25 for better balance
