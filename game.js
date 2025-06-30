@@ -94,13 +94,14 @@ class AssetManager {
 
 class DamageNumber {
     constructor(x, y, value, type = 'damage') {
-        this.x = x;
-        this.y = y;
+        // Add very small random offset to prevent overlapping
+        this.x = x + (Math.random() - 0.5) * 10;
+        this.y = y + (Math.random() - 0.5) * 5;
         this.value = value;
         this.type = type; // 'damage', 'heal', 'crit'
         this.lifetime = 1500; // ms
         this.age = 0;
-        this.vx = (Math.random() - 0.5) * 50; // Random horizontal drift
+        this.vx = (Math.random() - 0.5) * 20; // Reduced horizontal drift
         this.vy = -80; // Float upward
         this.gravity = 20; // Slow down vertical movement
         this.active = true;
@@ -603,10 +604,9 @@ class Game {
     }
     
     createDamageNumber(x, y, value, type = 'damage') {
-        // Position damage numbers well above the enemy (radius 25 + health bar + margin)
-        const offsetX = (Math.random() - 0.5) * 15; // Small horizontal variance
-        const offsetY = -45 + (Math.random() - 0.5) * 8; // Well above enemy and health bar
-        this.damageNumbers.push(new DamageNumber(x + offsetX, y + offsetY, value, type));
+        // Position damage numbers exactly above the enemy (no random variance)
+        const offsetY = -45; // Fixed position above enemy and health bar
+        this.damageNumbers.push(new DamageNumber(x, y + offsetY, value, type));
     }
     
     drawBackground() {
@@ -3201,11 +3201,11 @@ class BoomerangProjectile extends Projectile {
         this.radius = this.baseRadius * sizeMultiplier;
         this.returnX = returnX;
         this.returnY = returnY;
-        this.maxDistance = 200 * sizeMultiplier;
+        this.maxDistance = 280 * sizeMultiplier;
         this.returning = false;
         this.distanceTraveled = 0;
         this.rotationAngle = 0;
-        this.rotationSpeed = 0.3;
+        this.rotationSpeed = 0.15;
     }
     
     update(deltaTime) {
