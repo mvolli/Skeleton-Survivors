@@ -603,9 +603,9 @@ class Game {
     }
     
     createDamageNumber(x, y, value, type = 'damage') {
-        // Position damage numbers above the target
-        const offsetX = (Math.random() - 0.5) * 10; // Small horizontal variance
-        const offsetY = -20 + (Math.random() - 0.5) * 10; // Above target with small variance
+        // Position damage numbers well above the enemy (radius 25 + health bar + margin)
+        const offsetX = (Math.random() - 0.5) * 15; // Small horizontal variance
+        const offsetY = -45 + (Math.random() - 0.5) * 8; // Well above enemy and health bar
         this.damageNumbers.push(new DamageNumber(x + offsetX, y + offsetY, value, type));
     }
     
