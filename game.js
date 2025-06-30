@@ -92,83 +92,6 @@ class AssetManager {
     }
 }
 
-class DamageNumber {
-    constructor(x, y, value, type = 'damage') {
-        // Add very small random offset to prevent overlapping
-        this.x = x + (Math.random() - 0.5) * 10;
-        this.y = y + (Math.random() - 0.5) * 5;
-        this.value = value;
-        this.type = type; // 'damage', 'heal', 'crit'
-        this.lifetime = 1500; // ms
-        this.age = 0;
-        this.vx = (Math.random() - 0.5) * 20; // Reduced horizontal drift
-        this.vy = -80; // Float upward
-        this.gravity = 20; // Slow down vertical movement
-        this.active = true;
-    }
-    
-    update(deltaTime) {
-        this.age += deltaTime;
-        
-        if (this.age >= this.lifetime) {
-            this.active = false;
-            return;
-        }
-        
-        const dt = deltaTime / 1000;
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
-        this.vy += this.gravity * dt; // Decelerate upward movement
-    }
-    
-    render(ctx, camera) {
-        if (!this.active) return;
-        
-        const alpha = Math.max(0, 1 - (this.age / this.lifetime));
-        const scale = 1 + (this.age / this.lifetime) * 0.3; // Slight scale increase
-        
-        ctx.save();
-        
-        // Position relative to camera
-        const screenX = this.x - camera.x;
-        const screenY = this.y - camera.y;
-        
-        ctx.globalAlpha = alpha;
-        ctx.font = `bold ${Math.floor(16 * scale)}px monospace`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Set color based on type
-        let color, shadowColor;
-        switch (this.type) {
-            case 'damage':
-                color = '#ff6b6b';
-                shadowColor = '#cc0000';
-                break;
-            case 'heal':
-                color = '#4ecdc4';
-                shadowColor = '#00aa88';
-                break;
-            case 'crit':
-                color = '#f1c40f';
-                shadowColor = '#e67e22';
-                break;
-            default:
-                color = '#ffffff';
-                shadowColor = '#666666';
-        }
-        
-        // Shadow for better visibility
-        ctx.fillStyle = shadowColor;
-        ctx.fillText(this.value, screenX + 1, screenY + 1);
-        
-        // Main text
-        ctx.fillStyle = color;
-        ctx.fillText(this.value, screenX, screenY);
-        
-        ctx.restore();
-    }
-}
 
 class Game {
     constructor(saveManager = null) {
@@ -184,7 +107,6 @@ class Game {
         this.projectiles = [];
         this.particles = [];
         this.items = [];
-        this.damageNumbers = [];
         
         this.gameTime = 0;
         this.score = 0;
@@ -388,7 +310,6 @@ class Game {
             // Check boss collision with player
             if (this.checkCollision(this.currentBoss, this.player)) {
                 this.player.takeDamage(25); // Bosses do more damage
-                this.createDamageNumber(this.player.x, this.player.y, 25, 'damage');
                 // Don't kill boss on hit
             }
             
@@ -411,7 +332,6 @@ class Game {
             // Check collision with player
             if (this.checkCollision(enemy, this.player)) {
                 this.player.takeDamage(10);
-                this.createDamageNumber(this.player.x, this.player.y, 10, 'damage');
                 enemy.health = 0; // Kill enemy on hit
             }
         });
@@ -426,7 +346,6 @@ class Game {
                     // Use new penetration system
                     if (projectile.hitEnemy && projectile.hitEnemy(enemy)) {
                         enemy.takeDamage(projectile.damage);
-                        this.createDamageNumber(enemy.x, enemy.y, projectile.damage, 'damage');
                         
                         // Handle fireball explosion
                         if (projectile instanceof FireballProjectile) {
@@ -442,7 +361,6 @@ class Game {
                     } else if (!projectile.hitEnemy) {
                         // Fallback for projectiles without penetration system
                         enemy.takeDamage(projectile.damage);
-                        this.createDamageNumber(enemy.x, enemy.y, projectile.damage, 'damage');
                         projectile.active = false;
                         this.createHitParticles(enemy.x, enemy.y);
                         
@@ -457,7 +375,6 @@ class Game {
                 // Use new penetration system
                 if (projectile.hitEnemy && projectile.hitEnemy(this.currentBoss)) {
                     this.currentBoss.takeDamage(projectile.damage);
-                    this.createDamageNumber(this.currentBoss.x, this.currentBoss.y, projectile.damage, 'damage');
                     
                     // Handle fireball explosion
                     if (projectile instanceof FireballProjectile) {
@@ -476,7 +393,6 @@ class Game {
                 } else if (!projectile.hitEnemy) {
                     // Fallback for projectiles without penetration system
                     this.currentBoss.takeDamage(projectile.damage);
-                    this.createDamageNumber(this.currentBoss.x, this.currentBoss.y, projectile.damage, 'damage');
                     projectile.active = false;
                     this.createHitParticles(this.currentBoss.x, this.currentBoss.y);
                     
@@ -533,10 +449,6 @@ class Game {
         this.particles = this.particles.filter(p => p.active);
         this.items = this.items.filter(i => i.active);
         
-        // Update damage numbers
-        this.damageNumbers.forEach(dmgNum => dmgNum.update(deltaTime));
-        this.damageNumbers = this.damageNumbers.filter(dmgNum => dmgNum.active);
-        
         // Auto-fire weapons
         const allTargets = [...this.enemies];
         if (this.currentBoss) allTargets.push(this.currentBoss);
@@ -592,9 +504,6 @@ class Game {
         
         this.player.render(this.ctx);
         
-        // Draw damage numbers
-        this.damageNumbers.forEach(dmgNum => dmgNum.render(this.ctx, this.camera));
-        
         // Restore context
         this.ctx.restore();
         
@@ -603,12 +512,6 @@ class Game {
         this.renderBossIndicator();
     }
     
-    createDamageNumber(x, y, value, type = 'damage') {
-        // Position damage numbers from the enemy's health bar position
-        // Health bar is at: enemy.y - enemy.radius - 15 (enemy radius is 25)
-        const healthBarY = y - 25 - 15; // Match enemy health bar position
-        this.damageNumbers.push(new DamageNumber(x, healthBarY, value, type));
-    }
     
     drawBackground() {
         const gridSize = 50;
@@ -2782,12 +2685,10 @@ class ChainLightningWeapon {
                 const healAmount = Math.floor(finalDamage * player.lifesteal);
                 if (healAmount > 0) {
                     player.health = Math.min(player.health + healAmount, player.maxHealth);
-                    game.createDamageNumber(player.x, player.y, `+${healAmount}`, 'heal');
                 }
             }
             
             currentTarget.takeDamage(finalDamage);
-            game.createDamageNumber(currentTarget.x, currentTarget.y, Math.floor(finalDamage), isCrit ? 'crit' : 'damage');
             
             // Apply freeze chance
             if (Math.random() < player.freezeChance) {
