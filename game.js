@@ -92,6 +92,83 @@ class AssetManager {
     }
 }
 
+class DamageNumber {
+    constructor(x, y, value, type = 'damage') {
+        this.x = x;
+        this.y = y;
+        this.value = value;
+        this.type = type; // 'damage', 'heal', 'crit'
+        this.lifetime = 1500; // ms
+        this.age = 0;
+        this.vx = (Math.random() - 0.5) * 50; // Random horizontal drift
+        this.vy = -80; // Float upward
+        this.gravity = 20; // Slow down vertical movement
+        this.active = true;
+    }
+    
+    update(deltaTime) {
+        this.age += deltaTime;
+        
+        if (this.age >= this.lifetime) {
+            this.active = false;
+            return;
+        }
+        
+        const dt = deltaTime / 1000;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vy += this.gravity * dt; // Decelerate upward movement
+    }
+    
+    render(ctx, camera) {
+        if (!this.active) return;
+        
+        const alpha = Math.max(0, 1 - (this.age / this.lifetime));
+        const scale = 1 + (this.age / this.lifetime) * 0.3; // Slight scale increase
+        
+        ctx.save();
+        
+        // Position relative to camera
+        const screenX = this.x - camera.x;
+        const screenY = this.y - camera.y;
+        
+        ctx.globalAlpha = alpha;
+        ctx.font = `bold ${Math.floor(16 * scale)}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Set color based on type
+        let color, shadowColor;
+        switch (this.type) {
+            case 'damage':
+                color = '#ff6b6b';
+                shadowColor = '#cc0000';
+                break;
+            case 'heal':
+                color = '#4ecdc4';
+                shadowColor = '#00aa88';
+                break;
+            case 'crit':
+                color = '#f1c40f';
+                shadowColor = '#e67e22';
+                break;
+            default:
+                color = '#ffffff';
+                shadowColor = '#666666';
+        }
+        
+        // Shadow for better visibility
+        ctx.fillStyle = shadowColor;
+        ctx.fillText(this.value, screenX + 1, screenY + 1);
+        
+        // Main text
+        ctx.fillStyle = color;
+        ctx.fillText(this.value, screenX, screenY);
+        
+        ctx.restore();
+    }
+}
+
 class Game {
     constructor(saveManager = null) {
         this.canvas = document.getElementById('gameCanvas');
@@ -106,6 +183,7 @@ class Game {
         this.projectiles = [];
         this.particles = [];
         this.items = [];
+        this.damageNumbers = [];
         
         this.gameTime = 0;
         this.score = 0;
@@ -146,6 +224,12 @@ class Game {
     setupEventListeners() {
         document.addEventListener('keydown', (e) => {
             this.keys[e.key.toLowerCase()] = true;
+            
+            // Handle pause keys
+            if (e.key.toLowerCase() === 'p' || e.key === 'Escape') {
+                this.togglePause();
+                e.preventDefault();
+            }
         });
         
         document.addEventListener('keyup', (e) => {
@@ -169,6 +253,94 @@ class Game {
         
         this.render();
         requestAnimationFrame(() => this.gameLoop());
+    }
+    
+    togglePause() {
+        this.isPaused = !this.isPaused;
+        
+        if (this.isPaused) {
+            this.showPauseMenu();
+        } else {
+            this.hidePauseMenu();
+        }
+    }
+    
+    showPauseMenu() {
+        document.getElementById('pauseMenu').style.display = 'flex';
+        this.updatePauseMenuContent();
+    }
+    
+    updatePauseMenuContent() {
+        // Update current stats
+        document.getElementById('pauseLevel').textContent = this.level;
+        document.getElementById('pauseScore').textContent = this.score.toLocaleString();
+        
+        // Format game time
+        const totalSeconds = Math.floor(this.gameTime / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        document.getElementById('pauseTime').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Update active powerups
+        const activePowerupsDiv = document.getElementById('activePowerups');
+        activePowerupsDiv.innerHTML = '';
+        
+        const powerupStats = {
+            damage: this.player.damage > 1 ? `+${Math.round((this.player.damage - 1) * 100)}% Damage` : null,
+            attackSpeed: this.player.attackSpeed > 1 ? `+${Math.round((this.player.attackSpeed - 1) * 100)}% Attack Speed` : null,
+            moveSpeed: this.player.moveSpeed > 1 ? `+${Math.round((this.player.moveSpeed - 1) * 100)}% Move Speed` : null,
+            maxHealth: this.player.maxHealth > 100 ? `${this.player.maxHealth} Max Health` : null,
+            multishot: this.player.multishot > 0 ? `+${this.player.multishot} Multishot` : null,
+            penetration: this.player.penetration > 0 ? `+${this.player.penetration} Penetration` : null,
+            projectileSize: this.player.projectileSize > 1 ? `+${Math.round((this.player.projectileSize - 1) * 100)}% Projectile Size` : null,
+            expMultiplier: this.player.expMultiplier > 1 ? `+${Math.round((this.player.expMultiplier - 1) * 100)}% XP Gain` : null,
+            freezeChance: this.player.freezeChance > 0 ? `${Math.round(this.player.freezeChance * 100)}% Freeze Chance` : null,
+            lifesteal: this.player.lifesteal > 0 ? `${Math.round(this.player.lifesteal * 100)}% Life Steal` : null,
+            criticalHit: this.player.criticalHit > 0 ? `${Math.round(this.player.criticalHit * 100)}% Critical Hit` : null,
+            reflect: this.player.reflect > 0 ? `${Math.round(this.player.reflect * 100)}% Reflect` : null
+        };
+        
+        let hasActivePowerups = false;
+        Object.entries(powerupStats).forEach(([key, value]) => {
+            if (value) {
+                hasActivePowerups = true;
+                const powerupDiv = document.createElement('div');
+                powerupDiv.className = 'powerup-item';
+                powerupDiv.innerHTML = `
+                    <h4>${key.charAt(0).toUpperCase() + key.slice(1)}</h4>
+                    <p>${value}</p>
+                `;
+                activePowerupsDiv.appendChild(powerupDiv);
+            }
+        });
+        
+        if (!hasActivePowerups) {
+            activePowerupsDiv.innerHTML = '<p style="opacity: 0.6;">No active powerups</p>';
+        }
+        
+        // Update weapons
+        const weaponsDiv = document.getElementById('pauseWeapons');
+        weaponsDiv.innerHTML = '';
+        
+        if (this.player.weapons && this.player.weapons.length > 0) {
+            this.player.weapons.forEach(weapon => {
+                const weaponDiv = document.createElement('div');
+                weaponDiv.className = 'weapon-item';
+                const weaponName = weapon.constructor.name.replace('Weapon', '');
+                weaponDiv.innerHTML = `
+                    <h4>${weaponName}</h4>
+                    <p>Level: ${weapon.level || 1}</p>
+                    <p>Damage: ${weapon.damage || weapon.baseDamage || 'N/A'}</p>
+                `;
+                weaponsDiv.appendChild(weaponDiv);
+            });
+        } else {
+            weaponsDiv.innerHTML = '<p style="opacity: 0.6;">No weapons equipped</p>';
+        }
+    }
+    
+    hidePauseMenu() {
+        document.getElementById('pauseMenu').style.display = 'none';
     }
     
     update(deltaTime) {
@@ -215,6 +387,7 @@ class Game {
             // Check boss collision with player
             if (this.checkCollision(this.currentBoss, this.player)) {
                 this.player.takeDamage(25); // Bosses do more damage
+                this.createDamageNumber(this.player.x, this.player.y, 25, 'damage');
                 // Don't kill boss on hit
             }
             
@@ -237,6 +410,7 @@ class Game {
             // Check collision with player
             if (this.checkCollision(enemy, this.player)) {
                 this.player.takeDamage(10);
+                this.createDamageNumber(this.player.x, this.player.y, 10, 'damage');
                 enemy.health = 0; // Kill enemy on hit
             }
         });
@@ -251,6 +425,7 @@ class Game {
                     // Use new penetration system
                     if (projectile.hitEnemy && projectile.hitEnemy(enemy)) {
                         enemy.takeDamage(projectile.damage);
+                        this.createDamageNumber(enemy.x, enemy.y, projectile.damage, 'damage');
                         
                         // Handle fireball explosion
                         if (projectile instanceof FireballProjectile) {
@@ -266,6 +441,7 @@ class Game {
                     } else if (!projectile.hitEnemy) {
                         // Fallback for projectiles without penetration system
                         enemy.takeDamage(projectile.damage);
+                        this.createDamageNumber(enemy.x, enemy.y, projectile.damage, 'damage');
                         projectile.active = false;
                         this.createHitParticles(enemy.x, enemy.y);
                         
@@ -280,6 +456,7 @@ class Game {
                 // Use new penetration system
                 if (projectile.hitEnemy && projectile.hitEnemy(this.currentBoss)) {
                     this.currentBoss.takeDamage(projectile.damage);
+                    this.createDamageNumber(this.currentBoss.x, this.currentBoss.y, projectile.damage, 'damage');
                     
                     // Handle fireball explosion
                     if (projectile instanceof FireballProjectile) {
@@ -298,6 +475,7 @@ class Game {
                 } else if (!projectile.hitEnemy) {
                     // Fallback for projectiles without penetration system
                     this.currentBoss.takeDamage(projectile.damage);
+                    this.createDamageNumber(this.currentBoss.x, this.currentBoss.y, projectile.damage, 'damage');
                     projectile.active = false;
                     this.createHitParticles(this.currentBoss.x, this.currentBoss.y);
                     
@@ -354,6 +532,10 @@ class Game {
         this.particles = this.particles.filter(p => p.active);
         this.items = this.items.filter(i => i.active);
         
+        // Update damage numbers
+        this.damageNumbers.forEach(dmgNum => dmgNum.update(deltaTime));
+        this.damageNumbers = this.damageNumbers.filter(dmgNum => dmgNum.active);
+        
         // Auto-fire weapons
         const allTargets = [...this.enemies];
         if (this.currentBoss) allTargets.push(this.currentBoss);
@@ -409,12 +591,22 @@ class Game {
         
         this.player.render(this.ctx);
         
+        // Draw damage numbers
+        this.damageNumbers.forEach(dmgNum => dmgNum.render(this.ctx, this.camera));
+        
         // Restore context
         this.ctx.restore();
         
         // Draw UI elements (not affected by camera)
         this.renderBossWarning();
         this.renderBossIndicator();
+    }
+    
+    createDamageNumber(x, y, value, type = 'damage') {
+        // Add some randomness to position to avoid overlapping
+        const offsetX = (Math.random() - 0.5) * 20;
+        const offsetY = (Math.random() - 0.5) * 20;
+        this.damageNumbers.push(new DamageNumber(x + offsetX, y + offsetY, value, type));
     }
     
     drawBackground() {
@@ -2578,17 +2770,23 @@ class ChainLightningWeapon {
             
             // Apply damage with critical hit chance
             let finalDamage = this.damage * player.damage;
+            let isCrit = false;
             if (Math.random() < player.criticalHit) {
                 finalDamage *= 2;
+                isCrit = true;
             }
             
             // Apply lifesteal
             if (player.lifesteal > 0) {
                 const healAmount = Math.floor(finalDamage * player.lifesteal);
-                player.health = Math.min(player.health + healAmount, player.maxHealth);
+                if (healAmount > 0) {
+                    player.health = Math.min(player.health + healAmount, player.maxHealth);
+                    game.createDamageNumber(player.x, player.y, `+${healAmount}`, 'heal');
+                }
             }
             
             currentTarget.takeDamage(finalDamage);
+            game.createDamageNumber(currentTarget.x, currentTarget.y, Math.floor(finalDamage), isCrit ? 'crit' : 'damage');
             
             // Apply freeze chance
             if (Math.random() < player.freezeChance) {
@@ -2768,21 +2966,62 @@ class GrenadeProjectile extends Projectile {
     render(ctx) {
         ctx.save();
         
-        ctx.fillStyle = '#ff8800';
+        // Grenade body - dark metallic with orange accents
+        ctx.fillStyle = '#333333';
+        ctx.strokeStyle = '#ff8800';
+        ctx.lineWidth = 2;
         ctx.shadowColor = '#ff8800';
         ctx.shadowBlur = 8;
         
+        // Main grenade body (oval shape)
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y, this.radius, this.radius * 0.8, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
         
-        // Pulsing effect as it approaches explosion
+        // Grenade pin (small rectangle on top)
+        ctx.fillStyle = '#ffff00';
+        ctx.fillRect(this.x - 2, this.y - this.radius, 4, 3);
+        
+        // Safety lever
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(this.x + 3, this.y - this.radius + 1, 2, 0, Math.PI);
+        ctx.stroke();
+        
+        // Sparks trail for armed grenades
+        if (this.age > 500) {
+            for (let i = 0; i < 3; i++) {
+                const sparkX = this.x + (Math.random() - 0.5) * 8;
+                const sparkY = this.y + (Math.random() - 0.5) * 8;
+                ctx.fillStyle = Math.random() > 0.5 ? '#ffaa00' : '#ff6600';
+                ctx.beginPath();
+                ctx.arc(sparkX, sparkY, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Pulsing danger effect as it approaches explosion
         if (this.age > this.lifetime * 0.7) {
-            const pulseScale = 1 + Math.sin(this.age * 0.02) * 0.3;
-            ctx.globalAlpha = 0.5;
+            const pulseScale = 1 + Math.sin(this.age * 0.02) * 0.4;
+            const intensity = (this.age - this.lifetime * 0.7) / (this.lifetime * 0.3);
+            
+            ctx.globalAlpha = 0.6 * intensity;
+            ctx.fillStyle = '#ff0000';
+            ctx.shadowColor = '#ff0000';
+            ctx.shadowBlur = 15;
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius * pulseScale, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Explosion radius preview
+            ctx.globalAlpha = 0.2 * intensity;
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.explosionRadius * (0.5 + intensity * 0.5), 0, Math.PI * 2);
+            ctx.stroke();
         }
         
         ctx.restore();
@@ -3013,18 +3252,49 @@ class BoomerangProjectile extends Projectile {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotationAngle);
         
+        const size = this.radius;
+        
+        // Draw motion trail effect
         if (this.returning) {
-            ctx.fillStyle = '#00ff88';
+            // Returning boomerang - bright green with electric effect
             ctx.shadowColor = '#00ff88';
+            ctx.shadowBlur = 15;
+            
+            // Electric trail effect
+            for (let i = 0; i < 3; i++) {
+                ctx.save();
+                ctx.rotate(i * 0.5);
+                ctx.strokeStyle = `rgba(0, 255, 136, ${0.6 - i * 0.2})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, size + i * 3, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+            
+            // Main boomerang body - bright green with yellow edge
+            ctx.fillStyle = '#00ff88';
+            ctx.strokeStyle = '#44ff00';
         } else {
-            ctx.fillStyle = '#ffaa00';
-            ctx.shadowColor = '#ffaa00';
+            // Outward boomerang - wooden brown with metallic edge
+            ctx.shadowColor = '#cc8800';
+            ctx.shadowBlur = 10;
+            
+            // Spinning air distortion effect
+            ctx.strokeStyle = 'rgba(255, 170, 0, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(0, 0, size * 1.3, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Main boomerang body - wooden brown with metallic trim
+            ctx.fillStyle = '#8B4513';
+            ctx.strokeStyle = '#FFD700';
         }
         
-        ctx.shadowBlur = 8;
+        ctx.lineWidth = 2;
         
-        // Draw boomerang shape
-        const size = this.radius;
+        // Draw detailed boomerang shape with wood grain effect
         ctx.beginPath();
         ctx.moveTo(-size, -size * 0.3);
         ctx.quadraticCurveTo(0, -size, size, -size * 0.3);
@@ -3032,6 +3302,39 @@ class BoomerangProjectile extends Projectile {
         ctx.quadraticCurveTo(0, size, -size, size * 0.3);
         ctx.quadraticCurveTo(-size * 0.7, 0, -size, -size * 0.3);
         ctx.fill();
+        ctx.stroke();
+        
+        // Add decorative center grip
+        ctx.fillStyle = this.returning ? '#ffffff' : '#654321';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size * 0.2, size * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add carved lines for detail
+        ctx.strokeStyle = this.returning ? '#00cc66' : '#2F1B14';
+        ctx.lineWidth = 1;
+        for (let i = -1; i <= 1; i += 2) {
+            ctx.beginPath();
+            ctx.moveTo(i * size * 0.7, -size * 0.2);
+            ctx.lineTo(i * size * 0.3, size * 0.2);
+            ctx.stroke();
+        }
+        
+        // Whoosh effect particles
+        if (Math.random() < 0.3) {
+            const particleCount = this.returning ? 5 : 3;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (Math.PI * 2 / particleCount) * i + this.rotationAngle;
+                const dist = size * 1.5;
+                const px = Math.cos(angle) * dist;
+                const py = Math.sin(angle) * dist;
+                
+                ctx.fillStyle = this.returning ? 'rgba(0, 255, 136, 0.6)' : 'rgba(255, 170, 0, 0.4)';
+                ctx.beginPath();
+                ctx.arc(px, py, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
         
         ctx.restore();
     }
@@ -3150,9 +3453,9 @@ class PowerupManager {
             },
             {
                 name: "Life Steal",
-                description: "Gain 1 HP for every 20 damage dealt",
+                description: "Gain 1 HP for every 50 damage dealt",
                 type: "lifesteal",
-                value: 0.05
+                value: 0.02
             },
             {
                 name: "Critical Hit",

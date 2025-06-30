@@ -506,6 +506,73 @@
             color: #95a5a6;
             text-transform: uppercase;
         }
+        
+        /* Pause Menu Styles */
+        #pauseMenu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        #pauseContent {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border: 2px solid #4ecdc4;
+            border-radius: 15px;
+            padding: 30px;
+            color: white;
+            text-align: center;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .pause-stats, .powerup-status, .weapon-status {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .powerup-list, .weapon-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .powerup-item, .weapon-item {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #4ecdc4;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .powerup-item h4, .weapon-item h4 {
+            margin: 0 0 5px 0;
+            color: #f39c12;
+        }
+        
+        .powerup-item p, .weapon-item p {
+            margin: 0;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .pause-actions {
+            margin-top: 20px;
+        }
+        
+        .pause-actions .btn {
+            margin: 10px;
+        }
     </style>
 </head>
 <body>
@@ -738,6 +805,49 @@
         <p>Time Survived: <span id="finalTime">0:00</span></p>
         <button class="btn" onclick="restartGame()">Play Again</button>
         <button class="btn" onclick="returnToMenu()">Return to Menu</button>
+    </div>
+
+    <div id="pauseMenu" style="display: none;">
+        <div id="pauseContent">
+            <h2>⏸️ Game Paused</h2>
+            
+            <div class="pause-stats">
+                <h3>📊 Current Status</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Level:</span>
+                        <span class="stat-value" id="pauseLevel">1</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Score:</span>
+                        <span class="stat-value" id="pauseScore">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Time:</span>
+                        <span class="stat-value" id="pauseTime">0:00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="powerup-status">
+                <h3>⚡ Active Powerups</h3>
+                <div id="activePowerups" class="powerup-list">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+            
+            <div class="weapon-status">
+                <h3>⚔️ Weapons</h3>
+                <div id="pauseWeapons" class="weapon-list">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+            
+            <div class="pause-actions">
+                <button class="btn" onclick="window.game.togglePause()">Resume Game</button>
+                <button class="btn" onclick="returnToMenu()">Return to Menu</button>
+            </div>
+        </div>
     </div>
 
     <script src="game.js"></script>
