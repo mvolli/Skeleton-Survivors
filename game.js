@@ -603,9 +603,9 @@ class Game {
     }
     
     createDamageNumber(x, y, value, type = 'damage') {
-        // Add some randomness to position to avoid overlapping
-        const offsetX = (Math.random() - 0.5) * 20;
-        const offsetY = (Math.random() - 0.5) * 20;
+        // Position damage numbers above the target
+        const offsetX = (Math.random() - 0.5) * 10; // Small horizontal variance
+        const offsetY = -20 + (Math.random() - 0.5) * 10; // Above target with small variance
         this.damageNumbers.push(new DamageNumber(x + offsetX, y + offsetY, value, type));
     }
     
