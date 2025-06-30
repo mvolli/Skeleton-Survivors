@@ -604,9 +604,10 @@ class Game {
     }
     
     createDamageNumber(x, y, value, type = 'damage') {
-        // Position damage numbers exactly above the enemy (no random variance)
-        const offsetY = -45; // Fixed position above enemy and health bar
-        this.damageNumbers.push(new DamageNumber(x, y + offsetY, value, type));
+        // Position damage numbers from the enemy's health bar position
+        // Health bar is at: enemy.y - enemy.radius - 15 (enemy radius is 25)
+        const healthBarY = y - 25 - 15; // Match enemy health bar position
+        this.damageNumbers.push(new DamageNumber(x, healthBarY, value, type));
     }
     
     drawBackground() {
