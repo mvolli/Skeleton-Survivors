@@ -3203,6 +3203,34 @@ class PowerupManager {
                         type: "weapon",
                         value: "sword"
                     });
+                } else if (weapon instanceof GrenadeWeapon) {
+                    availablePowerups.push({
+                        name: `${weapon.name} Level ${weapon.level + 1}`,
+                        description: weapon.getUpgradeDescription(),
+                        type: "weapon",
+                        value: "grenade"
+                    });
+                } else if (weapon instanceof MineWeapon) {
+                    availablePowerups.push({
+                        name: `${weapon.name} Level ${weapon.level + 1}`,
+                        description: weapon.getUpgradeDescription(),
+                        type: "weapon",
+                        value: "mine"
+                    });
+                } else if (weapon instanceof ChainLightningWeapon) {
+                    availablePowerups.push({
+                        name: `${weapon.name} Level ${weapon.level + 1}`,
+                        description: weapon.getUpgradeDescription(),
+                        type: "weapon",
+                        value: "chainlightning"
+                    });
+                } else if (weapon instanceof BoomerangWeapon) {
+                    availablePowerups.push({
+                        name: `${weapon.name} Level ${weapon.level + 1}`,
+                        description: weapon.getUpgradeDescription(),
+                        type: "weapon",
+                        value: "boomerang"
+                    });
                 }
             }
         });
@@ -3232,6 +3260,43 @@ class PowerupManager {
                 description: "Gain a melee sword weapon for close combat",
                 type: "weapon",
                 value: "sword"
+            });
+        }
+        
+        // Add new weapons if not owned
+        if (!player.weapons.some(w => w instanceof GrenadeWeapon)) {
+            availablePowerups.push({
+                name: "Grenade Launcher",
+                description: "Gain explosive grenades that deal area damage",
+                type: "weapon",
+                value: "grenade"
+            });
+        }
+        
+        if (!player.weapons.some(w => w instanceof MineWeapon)) {
+            availablePowerups.push({
+                name: "Mine Layer",
+                description: "Place mines that explode when enemies approach",
+                type: "weapon",
+                value: "mine"
+            });
+        }
+        
+        if (!player.weapons.some(w => w instanceof ChainLightningWeapon)) {
+            availablePowerups.push({
+                name: "Chain Lightning",
+                description: "Lightning that jumps between nearby enemies",
+                type: "weapon",
+                value: "chainlightning"
+            });
+        }
+        
+        if (!player.weapons.some(w => w instanceof BoomerangWeapon)) {
+            availablePowerups.push({
+                name: "Boomerang",
+                description: "Returning projectile that hits on both trips",
+                type: "weapon",
+                value: "boomerang"
             });
         }
         
