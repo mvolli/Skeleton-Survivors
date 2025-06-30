@@ -309,7 +309,7 @@ class Game {
             
             // Check boss collision with player
             if (this.checkCollision(this.currentBoss, this.player)) {
-                this.player.takeDamage(25); // Bosses do more damage
+                this.player.takeDamage(40); // Bosses do significant damage
                 // Don't kill boss on hit
             }
             
@@ -331,7 +331,15 @@ class Game {
             
             // Check collision with player
             if (this.checkCollision(enemy, this.player)) {
-                this.player.takeDamage(10);
+                // Different enemy types do different damage
+                let damage = 20; // Basic skeleton damage
+                if (enemy instanceof FastSkeletonEnemy) {
+                    damage = 15; // Fast enemies do less damage but are harder to avoid
+                } else if (enemy instanceof TankSkeletonEnemy) {
+                    damage = 35; // Tank enemies do much more damage
+                }
+                
+                this.player.takeDamage(damage);
                 enemy.health = 0; // Kill enemy on hit
             }
         });
@@ -1348,7 +1356,7 @@ class GiantBoss extends BasicSkeletonEnemy {
                 );
                 
                 if (distance <= this.stompRadius) {
-                    player.takeDamage(50);
+                    player.takeDamage(75);
                 }
             }
         }
