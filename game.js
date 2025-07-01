@@ -1878,103 +1878,6 @@ class ZombieKing extends BasicZombieEnemy {
     }
 }
 
-// Poison Spit Projectile for Zombie Boss
-class PoisonSpitProjectile extends Projectile {
-    constructor(x, y, vx, vy, damage) {
-        super(x, y, vx, vy, damage, 0, 1.0);
-        this.radius = 8;
-        this.lifetime = 3000; // 3 seconds max
-        this.age = 0;
-        this.isEnemyProjectile = true; // Mark as enemy projectile
-    }
-    
-    update(deltaTime) {
-        super.update(deltaTime);
-        this.age += deltaTime;
-        
-        if (this.age >= this.lifetime) {
-            this.active = false;
-        }
-        
-        // Check collision with player
-        if (window.game && window.game.player) {
-            const dx = this.x - window.game.player.x;
-            const dy = this.y - window.game.player.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance <= this.radius + 20) { // Player radius ~20
-                // Damage player
-                window.game.player.takeDamage(this.damage);
-                this.active = false;
-                
-                // Create poison effect particles
-                for (let i = 0; i < 5; i++) {
-                    window.game.particles.push(new PoisonParticle(this.x, this.y));
-                }
-            }
-        }
-    }
-    
-    render(ctx) {
-        ctx.save();
-        
-        // Poison spit appearance
-        ctx.fillStyle = '#32cd32';
-        ctx.shadowColor = '#32cd32';
-        ctx.shadowBlur = 5;
-        
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Add bubbling effect
-        const alpha = 0.3 + Math.sin(this.age * 0.01) * 0.3;
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = '#9acd32';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.restore();
-    }
-}
-
-// Poison effect particle
-class PoisonParticle {
-    constructor(x, y) {
-        this.x = x + (Math.random() - 0.5) * 20;
-        this.y = y + (Math.random() - 0.5) * 20;
-        this.vx = (Math.random() - 0.5) * 100;
-        this.vy = (Math.random() - 0.5) * 100;
-        this.life = 500; // 0.5 seconds
-        this.maxLife = 500;
-        this.active = true;
-    }
-    
-    update(deltaTime) {
-        this.life -= deltaTime;
-        if (this.life <= 0) {
-            this.active = false;
-            return;
-        }
-        
-        const dt = deltaTime / 1000;
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
-    }
-    
-    render(ctx) {
-        const alpha = this.life / this.maxLife;
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = '#32cd32';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
-}
-
 class BasicWeapon {
     constructor() {
         this.name = "Basic Gun";
@@ -2177,6 +2080,103 @@ class Projectile {
             ctx.fill();
         }
         
+        ctx.restore();
+    }
+}
+
+// Poison Spit Projectile for Zombie Boss
+class PoisonSpitProjectile extends Projectile {
+    constructor(x, y, vx, vy, damage) {
+        super(x, y, vx, vy, damage, 0, 1.0);
+        this.radius = 8;
+        this.lifetime = 3000; // 3 seconds max
+        this.age = 0;
+        this.isEnemyProjectile = true; // Mark as enemy projectile
+    }
+    
+    update(deltaTime) {
+        super.update(deltaTime);
+        this.age += deltaTime;
+        
+        if (this.age >= this.lifetime) {
+            this.active = false;
+        }
+        
+        // Check collision with player
+        if (window.game && window.game.player) {
+            const dx = this.x - window.game.player.x;
+            const dy = this.y - window.game.player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance <= this.radius + 20) { // Player radius ~20
+                // Damage player
+                window.game.player.takeDamage(this.damage);
+                this.active = false;
+                
+                // Create poison effect particles
+                for (let i = 0; i < 5; i++) {
+                    window.game.particles.push(new PoisonParticle(this.x, this.y));
+                }
+            }
+        }
+    }
+    
+    render(ctx) {
+        ctx.save();
+        
+        // Poison spit appearance
+        ctx.fillStyle = '#32cd32';
+        ctx.shadowColor = '#32cd32';
+        ctx.shadowBlur = 5;
+        
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add bubbling effect
+        const alpha = 0.3 + Math.sin(this.age * 0.01) * 0.3;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#9acd32';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+}
+
+// Poison effect particle
+class PoisonParticle {
+    constructor(x, y) {
+        this.x = x + (Math.random() - 0.5) * 20;
+        this.y = y + (Math.random() - 0.5) * 20;
+        this.vx = (Math.random() - 0.5) * 100;
+        this.vy = (Math.random() - 0.5) * 100;
+        this.life = 500; // 0.5 seconds
+        this.maxLife = 500;
+        this.active = true;
+    }
+    
+    update(deltaTime) {
+        this.life -= deltaTime;
+        if (this.life <= 0) {
+            this.active = false;
+            return;
+        }
+        
+        const dt = deltaTime / 1000;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+    }
+    
+    render(ctx) {
+        const alpha = this.life / this.maxLife;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#32cd32';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
     }
 }
