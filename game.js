@@ -3096,7 +3096,11 @@ class TargetIndicator {
             ctx.lineTo(x, y);
             ctx.lineTo(x + Math.cos(angle - Math.PI/4) * bracketSize, y + Math.sin(angle - Math.PI/4) * bracketSize);
             ctx.stroke();
-        }\n        \n        ctx.restore();\n    }\n}
+        }
+        
+        ctx.restore();
+    }
+}
 
 class MineProjectile extends Projectile {
     constructor(x, y, damage, explosionRadius = 70, sizeMultiplier = 1.0) {
