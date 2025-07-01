@@ -658,7 +658,7 @@ class Game {
         
         if (this.zombiesUnlocked) {
             // Add zombie types after 10 minutes - they can spawn alongside skeletons
-            enemyTypes = enemyTypes.concat([BasicZombieEnemy, FastZombieEnemy, TankZombieEnemy]);
+            enemyTypes = enemyTypes.concat([BasicZombieEnemy, FastZombieEnemy, TankZombieEnemy, RangedZombieEnemy]);
         }
         
         const EnemyClass = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
@@ -1471,14 +1471,14 @@ class BasicZombieEnemy {
     constructor(x, y, assets) {
         this.x = x;
         this.y = y;
-        this.health = 80; // Stronger than skeleton (60)
-        this.maxHealth = 80;
+        this.health = 120; // Much stronger than skeleton (60)
+        this.maxHealth = 120;
         this.speed = 45; // Slightly slower than skeleton (50) but more damage
         this.radius = 25;
         this.scale = 1.3; // Slightly larger than skeleton (1.2)
-        this.scoreValue = 15; // More valuable than skeleton (10)
-        this.expValue = 12; // More XP than skeleton (8)
-        this.damage = 25; // Higher damage than skeleton (20)
+        this.scoreValue = 20; // More valuable than skeleton (10)
+        this.expValue = 15; // More XP than skeleton (8)
+        this.damage = 30; // Higher damage than skeleton (20)
         this.frozen = false;
         this.freezeTimer = 0;
         
@@ -1581,28 +1581,28 @@ class BasicZombieEnemy {
 class FastZombieEnemy extends BasicZombieEnemy {
     constructor(x, y, assets) {
         super(x, y, assets);
-        this.health = 55; // Less health but faster
-        this.maxHealth = 55;
+        this.health = 85; // Less health but faster
+        this.maxHealth = 85;
         this.speed = 90; // Much faster than basic zombie
         this.radius = 22;
         this.scale = 1.1;
-        this.scoreValue = 20;
-        this.expValue = 10;
-        this.damage = 20; // Slightly less damage for speed
+        this.scoreValue = 25;
+        this.expValue = 12;
+        this.damage = 25; // Slightly less damage for speed
     }
 }
 
 class TankZombieEnemy extends BasicZombieEnemy {
     constructor(x, y, assets) {
         super(x, y, assets);
-        this.health = 160; // Much tankier than basic zombie
-        this.maxHealth = 160;
+        this.health = 240; // Much tankier than basic zombie
+        this.maxHealth = 240;
         this.speed = 20; // Slower but devastating
         this.radius = 35;
         this.scale = 1.8;
-        this.scoreValue = 40;
-        this.expValue = 20;
-        this.damage = 35; // High damage
+        this.scoreValue = 50;
+        this.expValue = 25;
+        this.damage = 45; // High damage
     }
     
     render(ctx) {
@@ -1646,6 +1646,249 @@ class TankZombieEnemy extends BasicZombieEnemy {
         ctx.fillStyle = '#006400'; // Dark green for tank zombie health
         ctx.fillRect(this.x - healthBarWidth/2, this.y - this.radius * this.scale - 12, healthBarWidth * healthPercentage, healthBarHeight);
         
+        ctx.restore();
+    }
+}
+
+class RangedZombieEnemy extends BasicZombieEnemy {
+    constructor(x, y, assets) {
+        super(x, y, assets);
+        this.health = 100; // Medium health for ranged unit
+        this.maxHealth = 100;
+        this.speed = 35; // Slower to balance ranged attacks
+        this.radius = 25;
+        this.scale = 1.2;
+        this.scoreValue = 30; // Higher value for ranged threat
+        this.expValue = 18;
+        this.damage = 25; // Melee damage if player gets close
+        
+        // Projectile throwing mechanics
+        this.throwCooldown = 0;
+        this.throwCooldownMax = 2500; // 2.5 seconds between throws
+        this.throwRange = 350; // Can attack from longer distance
+        this.projectileDamage = 20; // Projectile damage
+        this.isThrowing = false;
+        this.throwDuration = 800; // 0.8 second throw animation
+        this.throwTimer = 0;
+    }
+    
+    update(deltaTime, player) {
+        super.update(deltaTime, player);
+        
+        if (this.frozen) return; // Don't attack when frozen
+        
+        // Handle projectile throwing
+        this.throwCooldown += deltaTime;
+        
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (this.isThrowing) {
+            this.throwTimer += deltaTime;
+            if (this.throwTimer >= this.throwDuration) {
+                this.isThrowing = false;
+                this.throwTimer = 0;
+                
+                // Throw projectile at player
+                if (distance <= this.throwRange && distance > 0) {
+                    const speed = 180;
+                    const vx = (dx / distance) * speed;
+                    const vy = (dy / distance) * speed;
+                    
+                    // Add zombie projectile to game
+                    if (window.game) {
+                        window.game.projectiles.push(new ZombieThrowProjectile(
+                            this.x, this.y, vx, vy, this.projectileDamage
+                        ));
+                    }
+                }
+            }
+        } else if (this.throwCooldown >= this.throwCooldownMax) {
+            // Check if player is in range for projectile attack
+            if (distance <= this.throwRange && distance > this.radius + 50) { // Don't throw when too close
+                this.isThrowing = true;
+                this.throwCooldown = 0;
+            }
+        }
+    }
+    
+    render(ctx) {
+        ctx.save();
+        
+        // Throwing animation effect
+        if (this.isThrowing) {
+            ctx.shadowColor = '#8b4513'; // Brown glow when throwing
+            ctx.shadowBlur = 15;
+        }
+        
+        // Render zombie sprite with current animation
+        if (this.currentAnimation && this.currentAnimation.loaded) {
+            this.currentAnimation.render(ctx, this.x, this.y, this.scale);
+        } else {
+            // Fallback ranged zombie color - brown
+            ctx.fillStyle = '#8b4513';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Add brown overlay for ranged zombie identification
+        ctx.globalCompositeOperation = 'multiply';
+        if (this.isThrowing) {
+            ctx.fillStyle = 'rgba(139, 69, 19, 0.6)'; // Darker when throwing
+        } else {
+            ctx.fillStyle = 'rgba(139, 69, 19, 0.3)'; // Normal brown overlay
+        }
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * this.scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        
+        // Frozen effect
+        if (this.frozen) {
+            ctx.fillStyle = 'rgba(173, 216, 230, 0.7)';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius * this.scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Range indicator when throwing (optional visual feedback)
+        if (this.isThrowing) {
+            ctx.globalAlpha = 0.2;
+            ctx.strokeStyle = '#8b4513';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.throwRange, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        // Health bar
+        const healthBarWidth = 35;
+        const healthBarHeight = 4;
+        const healthPercentage = this.health / this.maxHealth;
+        
+        ctx.fillStyle = '#333';
+        ctx.fillRect(this.x - healthBarWidth/2, this.y - this.radius * this.scale - 10, healthBarWidth, healthBarHeight);
+        
+        ctx.fillStyle = '#8b4513'; // Brown for ranged zombie health
+        ctx.fillRect(this.x - healthBarWidth/2, this.y - this.radius * this.scale - 10, healthBarWidth * healthPercentage, healthBarHeight);
+        
+        ctx.restore();
+    }
+}
+
+// Zombie thrown projectile
+class ZombieThrowProjectile extends Projectile {
+    constructor(x, y, vx, vy, damage) {
+        super(x, y, vx, vy, damage, 0, 1.0);
+        this.radius = 6;
+        this.lifetime = 4000; // 4 seconds max
+        this.age = 0;
+        this.isEnemyProjectile = true; // Mark as enemy projectile
+        this.rotation = 0;
+    }
+    
+    update(deltaTime) {
+        super.update(deltaTime);
+        this.age += deltaTime;
+        this.rotation += deltaTime * 0.01; // Spinning rock/debris
+        
+        if (this.age >= this.lifetime) {
+            this.active = false;
+        }
+        
+        // Check collision with player
+        if (window.game && window.game.player) {
+            const dx = this.x - window.game.player.x;
+            const dy = this.y - window.game.player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance <= this.radius + 20) { // Player radius ~20
+                // Damage player
+                window.game.player.takeDamage(this.damage);
+                this.active = false;
+                
+                // Create impact particles
+                for (let i = 0; i < 3; i++) {
+                    window.game.particles.push(new DebrisParticle(this.x, this.y));
+                }
+            }
+        }
+    }
+    
+    render(ctx) {
+        ctx.save();
+        
+        // Debris/rock appearance
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        
+        ctx.fillStyle = '#654321'; // Dark brown
+        ctx.strokeStyle = '#8b4513'; // Lighter brown outline
+        ctx.lineWidth = 1;
+        ctx.shadowColor = '#654321';
+        ctx.shadowBlur = 3;
+        
+        // Irregular rock shape
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const variance = 0.7 + Math.random() * 0.6; // Random size variation
+            const x = Math.cos(angle) * this.radius * variance;
+            const y = Math.sin(angle) * this.radius * variance;
+            
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.restore();
+    }
+}
+
+// Debris impact particle
+class DebrisParticle {
+    constructor(x, y) {
+        this.x = x + (Math.random() - 0.5) * 15;
+        this.y = y + (Math.random() - 0.5) * 15;
+        this.vx = (Math.random() - 0.5) * 80;
+        this.vy = (Math.random() - 0.5) * 80;
+        this.life = 400; // 0.4 seconds
+        this.maxLife = 400;
+        this.active = true;
+        this.size = 2 + Math.random() * 3;
+    }
+    
+    update(deltaTime) {
+        this.life -= deltaTime;
+        if (this.life <= 0) {
+            this.active = false;
+            return;
+        }
+        
+        const dt = deltaTime / 1000;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vx *= 0.95; // Friction
+        this.vy *= 0.95;
+    }
+    
+    render(ctx) {
+        const alpha = this.life / this.maxLife;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#8b4513';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
     }
 }
