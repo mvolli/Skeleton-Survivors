@@ -832,12 +832,15 @@ class Game {
             const weaponIcon = this.getWeaponIcon(weapon.name);
             const weaponLevel = weapon.level || 1;
             
+            // Calculate cooldown progress for circular overlay
+            const cooldownProgress = status.state === 'cooldown' && status.maxCooldown ? 
+                ((status.maxCooldown - status.timeLeft) / status.maxCooldown) * 100 : 0;
+            
             weaponSlot.innerHTML = `
+                <div class="weapon-cooldown-overlay" style="--progress: ${cooldownProgress}%"></div>
                 <div class="weapon-icon">${weaponIcon}</div>
                 <div class="weapon-name">${weapon.name}</div>
                 <div class="weapon-level">Lv.${weaponLevel}</div>
-                <div class="weapon-timer">${this.formatWeaponTimer(status.timeLeft)}</div>
-                <div class="weapon-status">${status.state}</div>
             `;
             
             weaponInventory.appendChild(weaponSlot);
@@ -1525,7 +1528,8 @@ class BasicWeapon {
         const timeUntilNext = Math.max(0, effectiveFireRate - this.lastFired);
         return {
             state: timeUntilNext > 0 ? 'cooldown' : 'ready',
-            timeLeft: timeUntilNext
+            timeLeft: timeUntilNext,
+            maxCooldown: effectiveFireRate
         };
     }
 }
@@ -1835,12 +1839,12 @@ class LaserWeapon {
     getStatus() {
         if (this.isFiring) {
             const timeLeft = this.fireDuration - (performance.now() - this.lastActivated);
-            return { state: 'firing', timeLeft: Math.max(0, timeLeft) };
+            return { state: 'firing', timeLeft: Math.max(0, timeLeft), maxCooldown: this.fireDuration };
         } else if (this.isOnCooldown) {
             const timeLeft = this.cooldownDuration - (performance.now() - this.lastActivated);
-            return { state: 'cooldown', timeLeft: Math.max(0, timeLeft) };
+            return { state: 'cooldown', timeLeft: Math.max(0, timeLeft), maxCooldown: this.cooldownDuration };
         } else {
-            return { state: 'ready', timeLeft: 0 };
+            return { state: 'ready', timeLeft: 0, maxCooldown: 0 };
         }
     }
     
@@ -2489,9 +2493,13 @@ class GrenadeWeapon {
     
     getStatus(player) {
         if (this.lastFired < this.fireRate) {
-            return { state: 'cooldown', timeLeft: (this.fireRate - this.lastFired) / 1000 };
+            return { 
+                state: 'cooldown', 
+                timeLeft: (this.fireRate - this.lastFired) / 1000,
+                maxCooldown: this.fireRate / 1000
+            };
         }
-        return { state: 'ready', timeLeft: 0 };
+        return { state: 'ready', timeLeft: 0, maxCooldown: 0 };
     }
     
     update(deltaTime, enemies, projectiles, player) {
@@ -2572,9 +2580,13 @@ class MineWeapon {
     
     getStatus(player) {
         if (this.lastFired < this.fireRate) {
-            return { state: 'cooldown', timeLeft: (this.fireRate - this.lastFired) / 1000 };
+            return { 
+                state: 'cooldown', 
+                timeLeft: (this.fireRate - this.lastFired) / 1000,
+                maxCooldown: this.fireRate / 1000
+            };
         }
-        return { state: 'ready', timeLeft: 0 };
+        return { state: 'ready', timeLeft: 0, maxCooldown: 0 };
     }
     
     update(deltaTime, enemies, projectiles, player) {
@@ -2633,9 +2645,13 @@ class ChainLightningWeapon {
     
     getStatus(player) {
         if (this.lastFired < this.fireRate) {
-            return { state: 'firing', timeLeft: (this.fireRate - this.lastFired) / 1000 };
+            return { 
+                state: 'firing', 
+                timeLeft: (this.fireRate - this.lastFired) / 1000,
+                maxCooldown: this.fireRate / 1000
+            };
         }
-        return { state: 'ready', timeLeft: 0 };
+        return { state: 'ready', timeLeft: 0, maxCooldown: 0 };
     }
     
     update(deltaTime, enemies, projectiles, player) {
@@ -2761,9 +2777,13 @@ class BoomerangWeapon {
     
     getStatus(player) {
         if (this.lastFired < this.fireRate) {
-            return { state: 'cooldown', timeLeft: (this.fireRate - this.lastFired) / 1000 };
+            return { 
+                state: 'cooldown', 
+                timeLeft: (this.fireRate - this.lastFired) / 1000,
+                maxCooldown: this.fireRate / 1000
+            };
         }
-        return { state: 'ready', timeLeft: 0 };
+        return { state: 'ready', timeLeft: 0, maxCooldown: 0 };
     }
     
     update(deltaTime, enemies, projectiles, player) {
