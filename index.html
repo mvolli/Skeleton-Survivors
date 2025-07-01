@@ -541,17 +541,22 @@
         
         .weapon-cooldown-overlay {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            background: conic-gradient(from 0deg, rgba(231, 76, 60, 0.8) var(--progress, 0%), transparent var(--progress, 0%));
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            background: 
+                conic-gradient(from -90deg, 
+                    rgba(231, 76, 60, 0.75) 0%, 
+                    rgba(231, 76, 60, 0.75) var(--progress, 0%), 
+                    transparent var(--progress, 0%), 
+                    transparent 100%
+                );
             opacity: 0;
             transition: opacity 0.3s ease;
             pointer-events: none;
-            z-index: 1;
+            z-index: 10;
         }
         
         .weapon-slot.cooldown .weapon-cooldown-overlay {
