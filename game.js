@@ -1708,6 +1708,17 @@ class FireballWeapon {
             ));
         }
     }
+    
+    getStatus(player) {
+        if (this.lastFired < this.fireRate) {
+            return { 
+                state: 'cooldown', 
+                timeLeft: (this.fireRate - this.lastFired) / 1000,
+                maxCooldown: this.fireRate / 1000
+            };
+        }
+        return { state: 'ready', timeLeft: 0, maxCooldown: 0 };
+    }
 }
 
 class LaserWeapon {
@@ -1760,8 +1771,8 @@ class LaserWeapon {
                 this.isFiring = true;
                 this.lastActivated = currentTime;
                 // Set initial beam angle towards target
-                const dx = target.x - game.player.x;
-                const dy = target.y - game.player.y;
+                const dx = target.x - window.game.player.x;
+                const dy = target.y - window.game.player.y;
                 this.beamAngle = Math.atan2(dy, dx);
             }
         } else if (this.isFiring) {
@@ -1789,8 +1800,8 @@ class LaserWeapon {
         
         enemies.forEach(enemy => {
             const distance = Math.sqrt(
-                Math.pow(enemy.x - game.player.x, 2) + 
-                Math.pow(enemy.y - game.player.y, 2)
+                Math.pow(enemy.x - window.game.player.x, 2) + 
+                Math.pow(enemy.y - window.game.player.y, 2)
             );
             
             if (distance < nearestDistance && distance <= this.range) {
