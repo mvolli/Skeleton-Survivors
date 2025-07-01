@@ -2804,6 +2804,63 @@ class ExplosionParticle {
     }
 }
 
+class GrenadeExplosionParticle {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 400;
+        this.vy = (Math.random() - 0.5) * 400;
+        this.life = 600;
+        this.maxLife = 600;
+        this.active = true;
+        this.length = 8 + Math.random() * 12; // Line length
+        this.angle = Math.random() * Math.PI * 2; // Line orientation
+        this.color = Math.random() > 0.7 ? '#ff4444' : '#ffaa00';
+        this.lineWidth = 2 + Math.random() * 2;
+    }
+    
+    update(deltaTime) {
+        const dt = deltaTime / 1000;
+        
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vx *= 0.96; // Slightly less friction than regular explosion
+        this.vy *= 0.96;
+        this.life -= deltaTime;
+        
+        // Rotate the line slightly as it moves
+        this.angle += (Math.random() - 0.5) * 0.1;
+        
+        if (this.life <= 0) {
+            this.active = false;
+        }
+    }
+    
+    render(ctx) {
+        const alpha = this.life / this.maxLife;
+        const currentLength = this.length * alpha; // Shrink as life decreases
+        
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.lineWidth * alpha;
+        ctx.lineCap = 'round';
+        
+        // Calculate line endpoints
+        const halfLength = currentLength / 2;
+        const x1 = this.x - Math.cos(this.angle) * halfLength;
+        const y1 = this.y - Math.sin(this.angle) * halfLength;
+        const x2 = this.x + Math.cos(this.angle) * halfLength;
+        const y2 = this.y + Math.sin(this.angle) * halfLength;
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
 class LaserHitParticle {
     constructor(x, y) {
         this.x = x;
@@ -3508,7 +3565,7 @@ class GrenadeProjectile extends Projectile {
     explode() {
         // Create large explosion particles
         for (let i = 0; i < 20; i++) {
-            game.particles.push(new ExplosionParticle(this.x, this.y, 1.5));
+            game.particles.push(new GrenadeExplosionParticle(this.x, this.y, 1.5));
         }
         
         // Create damage zone effect that persists briefly
