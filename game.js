@@ -2510,14 +2510,14 @@ class GrenadeWeapon {
                 maxCooldown: this.fireRate / 1000
             };
         }
-        return { state: 'ready', timeLeft: 0, maxCooldown: 0 };
+        return { state: 'ready', timeLeft: 0, maxCooldown: this.fireRate / 1000 };
     }
     
     update(deltaTime, enemies, projectiles, player) {
         this.lastFired += deltaTime;
         
         if (this.lastFired >= this.fireRate && enemies.length > 0) {
-            const nearestEnemy = this.findNearestEnemy(enemies, player);
+            const nearestEnemy = this.findStrongestEnemy(enemies, player);
             if (nearestEnemy) {
                 this.fire(nearestEnemy, projectiles, player);
                 this.lastFired = 0;
@@ -2542,6 +2542,25 @@ class GrenadeWeapon {
         });
         
         return nearest;
+    }
+    
+    findStrongestEnemy(enemies, player) {
+        let strongest = null;
+        let highestHealth = 0;
+        
+        enemies.forEach(enemy => {
+            const distance = Math.sqrt(
+                Math.pow(enemy.x - player.x, 2) + 
+                Math.pow(enemy.y - player.y, 2)
+            );
+            
+            if (distance <= this.range && enemy.health > highestHealth) {
+                strongest = enemy;
+                highestHealth = enemy.health;
+            }
+        });
+        
+        return strongest;
     }
     
     fire(target, projectiles, player) {
