@@ -4187,11 +4187,13 @@ let saveManager = null;
 let game = null;
 
 function selectSlot(slot) {
+    console.log('selectSlot called with slot:', slot);
     if (!saveManager) {
         console.error('SaveManager not initialized');
         return;
     }
     
+    console.log('SaveManager found, proceeding with slot selection');
     saveManager.currentSlot = slot;
     document.getElementById('mainMenu').style.display = 'none';
     document.getElementById('characterMenu').style.display = 'flex';
@@ -4199,9 +4201,11 @@ function selectSlot(slot) {
     // Update character menu
     document.getElementById('selectedSlotName').textContent = `Slot ${slot}`;
     saveManager.updateCharacterStats(slot);
+    console.log('Slot selection completed for slot:', slot);
 }
 
 function startGame() {
+    console.log('startGame called');
     document.getElementById('characterMenu').style.display = 'none';
     document.getElementById('gameCanvas').style.display = 'block';
     document.getElementById('ui').style.display = 'block';
@@ -4274,8 +4278,10 @@ function restartGame() {
 
 // Initialize menu when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing game...');
     // Initialize save manager and update displays
     saveManager = new SaveManager();
+    console.log('SaveManager initialized:', saveManager);
     for (let i = 1; i <= 3; i++) {
         saveManager.updateSlotDisplay(i);
     }
@@ -4283,4 +4289,5 @@ document.addEventListener('DOMContentLoaded', () => {
     // Show main menu by default
     document.getElementById('mainMenu').style.display = 'flex';
     document.getElementById('gameCanvas').style.display = 'none';
+    console.log('Game initialization complete');
 });
