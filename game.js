@@ -318,6 +318,16 @@ class Game {
                 this.score += this.currentBoss.scoreValue;
                 this.experience += Math.floor(this.currentBoss.expValue * this.player.expMultiplier);
                 this.createDeathParticles(this.currentBoss.x, this.currentBoss.y);
+                
+                // Guaranteed diamond rewards for boss defeats - make them feel earned!
+                const diamondReward = this.currentBoss instanceof GiantBoss ? 5 : 3; // Giant boss gives 5, regular boss gives 3
+                for (let i = 0; i < diamondReward; i++) {
+                    // Spread diamonds around the boss position
+                    const offsetX = (Math.random() - 0.5) * 80;
+                    const offsetY = (Math.random() - 0.5) * 80;
+                    this.items.push(new DiamondPickup(this.currentBoss.x + offsetX, this.currentBoss.y + offsetY));
+                }
+                
                 this.currentBoss = null;
                 
                 // Reset boss timer when boss is defeated
@@ -686,14 +696,8 @@ class Game {
     }
     
     handleMultishotSplit(projectile, hitX, hitY) {
-        // Don't split if projectile is inactive or is a fireball (they explode)
-        if (!projectile.active || projectile instanceof FireballProjectile) return;
-        
-        // Calculate splits: base 1 split + player multishot level
-        const totalSplits = 1 + (this.player.multishot || 0);
-        
-        // Only split if we have splits available
-        if (totalSplits <= 0) return;
+        // Multishot now handled at firing time with angular spread - disable bullet splitting
+        return;
         
         // Create split projectiles
         for (let i = 0; i < totalSplits; i++) {
@@ -1504,21 +1508,36 @@ class BasicWeapon {
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         if (distance > 0) {
-            const vx = (dx / distance) * this.projectileSpeed;
-            const vy = (dy / distance) * this.projectileSpeed;
+            // Calculate base angle towards target
+            const baseAngle = Math.atan2(dy, dx);
             
             // Apply player damage multiplier
             const finalDamage = Math.floor(this.damage * player.damage);
             
-            projectiles.push(new Projectile(
-                player.x, 
-                player.y, 
-                vx, 
-                vy, 
-                finalDamage,
-                player.penetration,
-                player.projectileSize
-            ));
+            // Calculate number of projectiles to fire
+            const projectileCount = 1 + (player.multishot || 0);
+            
+            // Calculate spread - 30 degrees total spread, scaled by projectile count
+            const totalSpreadRadians = (Math.PI / 6) * Math.min(projectileCount / 3, 1.5); // 30° base, max 45°
+            const angleStep = projectileCount > 1 ? totalSpreadRadians / (projectileCount - 1) : 0;
+            const startAngle = baseAngle - totalSpreadRadians / 2;
+            
+            // Fire multiple projectiles with angular spread
+            for (let i = 0; i < projectileCount; i++) {
+                const angle = projectileCount > 1 ? startAngle + (i * angleStep) : baseAngle;
+                const vx = Math.cos(angle) * this.projectileSpeed;
+                const vy = Math.sin(angle) * this.projectileSpeed;
+                
+                projectiles.push(new Projectile(
+                    player.x, 
+                    player.y, 
+                    vx, 
+                    vy, 
+                    finalDamage,
+                    player.penetration,
+                    player.projectileSize
+                ));
+            }
         }
     }
     
@@ -1693,19 +1712,34 @@ class FireballWeapon {
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         if (distance > 0) {
-            const vx = (dx / distance) * this.projectileSpeed;
-            const vy = (dy / distance) * this.projectileSpeed;
+            // Calculate base angle towards target
+            const baseAngle = Math.atan2(dy, dx);
             
-            projectiles.push(new FireballProjectile(
-                player.x, 
-                player.y, 
-                vx, 
-                vy, 
-                this.damage,
-                this.explosionRadius,
-                player.penetration,
-                player.projectileSize
-            ));
+            // Calculate number of projectiles to fire
+            const projectileCount = 1 + (player.multishot || 0);
+            
+            // Calculate spread - 25 degrees total for fireballs (tighter than basic weapon)
+            const totalSpreadRadians = (Math.PI / 7.2) * Math.min(projectileCount / 3, 1.2); // 25° base, max 30°
+            const angleStep = projectileCount > 1 ? totalSpreadRadians / (projectileCount - 1) : 0;
+            const startAngle = baseAngle - totalSpreadRadians / 2;
+            
+            // Fire multiple fireballs with angular spread
+            for (let i = 0; i < projectileCount; i++) {
+                const angle = projectileCount > 1 ? startAngle + (i * angleStep) : baseAngle;
+                const vx = Math.cos(angle) * this.projectileSpeed;
+                const vy = Math.sin(angle) * this.projectileSpeed;
+                
+                projectiles.push(new FireballProjectile(
+                    player.x, 
+                    player.y, 
+                    vx, 
+                    vy, 
+                    this.damage,
+                    this.explosionRadius,
+                    player.penetration,
+                    player.projectileSize
+                ));
+            }
         }
     }
     
