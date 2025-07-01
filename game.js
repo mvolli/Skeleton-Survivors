@@ -83,6 +83,10 @@ class AssetManager {
         this.animations.skeletonIdle = new SpriteAnimation('gfx/skeleton-idle.png', 48, 48, 6, 250);
         this.animations.skeletonWalk = new SpriteAnimation('gfx/skeleton-walk.png', 48, 48, 4, 200);
         
+        // Zombie animations (7 frames idle, 4 frames walk)
+        this.animations.zombieIdle = new SpriteAnimation('gfx/zombie-idle.png', 48, 48, 7, 300);
+        this.animations.zombieWalk = new SpriteAnimation('gfx/zombie-walk.png', 48, 48, 4, 250);
+        
         // Ghost animation for player (using GIF)
         this.animations.ghostIdle = new GifAnimation('gfx/FANTASMA_GIF.gif', 1.0);
     }
@@ -132,6 +136,10 @@ class Game {
         this.currentBoss = null;
         this.bossWarning = null;
         this.bossWarningTimer = 0;
+        
+        // Zombie system - appears after 10 minutes
+        this.zombieUnlockTime = 600000; // 10 minutes in milliseconds
+        this.zombiesUnlocked = false;
         
         // Apply boss timer meta upgrade
         if (saveManager && saveManager.currentSlot) {
@@ -275,6 +283,13 @@ class Game {
         
         // Update player
         this.player.update(deltaTime, this.keys);
+        
+        // Check if zombies should be unlocked (after 10 minutes)
+        if (!this.zombiesUnlocked && this.gameTime >= this.zombieUnlockTime) {
+            this.zombiesUnlocked = true;
+            // Show zombie unlock notification (optional visual feedback)
+            console.log('Zombies have awakened!');
+        }
         
         // Spawn enemies
         this.enemySpawnTimer += deltaTime;
@@ -638,9 +653,15 @@ class Game {
         const x = this.player.x + Math.cos(angle) * spawnDistance;
         const y = this.player.y + Math.sin(angle) * spawnDistance;
         
-        const enemyTypes = [BasicSkeletonEnemy, FastSkeletonEnemy, TankSkeletonEnemy];
-        const EnemyClass = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+        // Enemy types based on zombie unlock status
+        let enemyTypes = [BasicSkeletonEnemy, FastSkeletonEnemy, TankSkeletonEnemy];
         
+        if (this.zombiesUnlocked) {
+            // Add zombie types after 10 minutes - they can spawn alongside skeletons
+            enemyTypes = enemyTypes.concat([BasicZombieEnemy, FastZombieEnemy, TankZombieEnemy]);
+        }
+        
+        const EnemyClass = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
         const enemy = new EnemyClass(x, y, this.assets);
         
         // Scale enemy health from level 10 onwards
@@ -667,10 +688,20 @@ class Game {
         const x = this.player.x + Math.cos(angle) * spawnDistance;
         const y = this.player.y + Math.sin(angle) * spawnDistance;
         
-        // Choose boss type based on level
-        const bossTypes = [SkeletonBoss, GiantBoss];
-        const BossClass = this.level < 15 ? SkeletonBoss : 
-                         bossTypes[Math.floor(Math.random() * bossTypes.length)];
+        // Choose boss type based on level and zombie unlock status
+        let BossClass;
+        
+        if (this.zombiesUnlocked) {
+            // After 10 minutes, use zombie bosses
+            const bossTypes = [ZombieBoss, ZombieKing];
+            BossClass = this.level < 20 ? ZombieBoss : 
+                        bossTypes[Math.floor(Math.random() * bossTypes.length)];
+        } else {
+            // Before 10 minutes, use skeleton bosses
+            const bossTypes = [SkeletonBoss, GiantBoss];
+            BossClass = this.level < 15 ? SkeletonBoss : 
+                        bossTypes[Math.floor(Math.random() * bossTypes.length)];
+        }
         
         this.currentBoss = new BossClass(x, y, this.assets);
         
@@ -1430,6 +1461,516 @@ class GiantBoss extends BasicSkeletonEnemy {
         ctx.textAlign = 'center';
         ctx.fillText(this.name, this.x, this.y - this.radius - 40);
         
+        ctx.restore();
+    }
+}
+
+// Zombie Enemy Classes - Stronger than skeletons, appear after 10 minutes
+
+class BasicZombieEnemy {
+    constructor(x, y, assets) {
+        this.x = x;
+        this.y = y;
+        this.health = 80; // Stronger than skeleton (60)
+        this.maxHealth = 80;
+        this.speed = 45; // Slightly slower than skeleton (50) but more damage
+        this.radius = 25;
+        this.scale = 1.3; // Slightly larger than skeleton (1.2)
+        this.scoreValue = 15; // More valuable than skeleton (10)
+        this.expValue = 12; // More XP than skeleton (8)
+        this.damage = 25; // Higher damage than skeleton (20)
+        this.frozen = false;
+        this.freezeTimer = 0;
+        
+        // Zombie animations
+        this.idleAnimation = assets.getAnimation('zombieIdle');
+        this.walkAnimation = assets.getAnimation('zombieWalk');
+        this.currentAnimation = this.idleAnimation;
+        this.isMoving = false;
+    }
+    
+    update(deltaTime, player) {
+        if (this.frozen) {
+            this.freezeTimer -= deltaTime;
+            if (this.freezeTimer <= 0) {
+                this.frozen = false;
+            }
+            return; // Don't move when frozen
+        }
+        
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > this.radius) {
+            const moveX = (dx / distance) * this.speed * (deltaTime / 1000);
+            const moveY = (dy / distance) * this.speed * (deltaTime / 1000);
+            
+            this.x += moveX;
+            this.y += moveY;
+            this.isMoving = true;
+        } else {
+            this.isMoving = false;
+        }
+        
+        // Switch animations based on movement
+        if (this.isMoving && this.currentAnimation === this.idleAnimation) {
+            this.currentAnimation = this.walkAnimation;
+        } else if (!this.isMoving && this.currentAnimation === this.walkAnimation) {
+            this.currentAnimation = this.idleAnimation;
+        }
+        
+        // Update current animation
+        if (this.currentAnimation) {
+            this.currentAnimation.update(deltaTime);
+        }
+    }
+    
+    takeDamage(amount) {
+        this.health -= amount;
+    }
+    
+    render(ctx) {
+        ctx.save();
+        
+        // Zombie-specific tint (green/decay overlay)
+        ctx.globalCompositeOperation = 'source-over';
+        
+        // Render zombie sprite with current animation
+        if (this.currentAnimation && this.currentAnimation.loaded) {
+            this.currentAnimation.render(ctx, this.x, this.y, this.scale);
+        } else {
+            // Fallback zombie color - sickly green
+            ctx.fillStyle = '#556b2f';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Add green decay overlay
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = 'rgba(85, 107, 47, 0.4)'; // Dark olive green
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * this.scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        
+        // Frozen effect
+        if (this.frozen) {
+            ctx.fillStyle = 'rgba(173, 216, 230, 0.7)';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius * this.scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Health bar
+        const healthBarWidth = 35;
+        const healthBarHeight = 4;
+        const healthPercentage = this.health / this.maxHealth;
+        
+        ctx.fillStyle = '#333';
+        ctx.fillRect(this.x - healthBarWidth/2, this.y - this.radius * this.scale - 10, healthBarWidth, healthBarHeight);
+        
+        ctx.fillStyle = '#228b22'; // Forest green for zombie health
+        ctx.fillRect(this.x - healthBarWidth/2, this.y - this.radius * this.scale - 10, healthBarWidth * healthPercentage, healthBarHeight);
+        
+        ctx.restore();
+    }
+}
+
+class FastZombieEnemy extends BasicZombieEnemy {
+    constructor(x, y, assets) {
+        super(x, y, assets);
+        this.health = 55; // Less health but faster
+        this.maxHealth = 55;
+        this.speed = 90; // Much faster than basic zombie
+        this.radius = 22;
+        this.scale = 1.1;
+        this.scoreValue = 20;
+        this.expValue = 10;
+        this.damage = 20; // Slightly less damage for speed
+    }
+}
+
+class TankZombieEnemy extends BasicZombieEnemy {
+    constructor(x, y, assets) {
+        super(x, y, assets);
+        this.health = 160; // Much tankier than basic zombie
+        this.maxHealth = 160;
+        this.speed = 20; // Slower but devastating
+        this.radius = 35;
+        this.scale = 1.8;
+        this.scoreValue = 40;
+        this.expValue = 20;
+        this.damage = 35; // High damage
+    }
+    
+    render(ctx) {
+        ctx.save();
+        
+        // Render zombie sprite with current animation
+        if (this.currentAnimation && this.currentAnimation.loaded) {
+            this.currentAnimation.render(ctx, this.x, this.y, this.scale);
+        } else {
+            // Fallback tank zombie color - dark green
+            ctx.fillStyle = '#2f4f2f';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Add dark green armored overlay for tank zombie
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = 'rgba(47, 79, 47, 0.5)'; // Dark forest green
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * this.scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        
+        // Frozen effect
+        if (this.frozen) {
+            ctx.fillStyle = 'rgba(173, 216, 230, 0.7)';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius * this.scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Larger health bar for tank
+        const healthBarWidth = 40;
+        const healthBarHeight = 6;
+        const healthPercentage = this.health / this.maxHealth;
+        
+        ctx.fillStyle = '#333';
+        ctx.fillRect(this.x - healthBarWidth/2, this.y - this.radius * this.scale - 12, healthBarWidth, healthBarHeight);
+        
+        ctx.fillStyle = '#006400'; // Dark green for tank zombie health
+        ctx.fillRect(this.x - healthBarWidth/2, this.y - this.radius * this.scale - 12, healthBarWidth * healthPercentage, healthBarHeight);
+        
+        ctx.restore();
+    }
+}
+
+class ZombieBoss extends BasicZombieEnemy {
+    constructor(x, y, assets) {
+        super(x, y, assets);
+        this.health = 1000; // Stronger than Skeleton Lord (800)
+        this.maxHealth = 1000;
+        this.speed = 25;
+        this.radius = 70;
+        this.scale = 2.8;
+        this.scoreValue = 600;
+        this.expValue = 300;
+        this.damage = 50;
+        this.name = "Zombie Overlord";
+        
+        // Poison spit attack
+        this.spitCooldown = 0;
+        this.spitCooldownMax = 3500; // 3.5 seconds
+        this.spitRange = 300;
+        this.isSpitting = false;
+        this.spitDuration = 1000; // 1 second spit animation
+        this.spitTimer = 0;
+    }
+    
+    update(deltaTime, player) {
+        super.update(deltaTime, player);
+        
+        // Handle spit attack
+        this.spitCooldown += deltaTime;
+        
+        if (this.isSpitting) {
+            this.spitTimer += deltaTime;
+            if (this.spitTimer >= this.spitDuration) {
+                this.isSpitting = false;
+                this.spitTimer = 0;
+                
+                // Create poison spit projectile
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance <= this.spitRange && distance > 0) {
+                    const speed = 150;
+                    const vx = (dx / distance) * speed;
+                    const vy = (dy / distance) * speed;
+                    
+                    // Add poison spit projectile to game
+                    if (window.game) {
+                        window.game.projectiles.push(new PoisonSpitProjectile(
+                            this.x, this.y, vx, vy, this.damage
+                        ));
+                    }
+                }
+            }
+        } else if (this.spitCooldown >= this.spitCooldownMax) {
+            // Check if player is in range for spit attack
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance <= this.spitRange) {
+                this.isSpitting = true;
+                this.spitCooldown = 0;
+            }
+        }
+    }
+    
+    render(ctx) {
+        ctx.save();
+        
+        // Boss glow effect
+        if (this.isSpitting) {
+            ctx.shadowColor = '#32cd32'; // Lime green glow when spitting
+            ctx.shadowBlur = 30;
+        } else {
+            ctx.shadowColor = '#228b22'; // Forest green glow
+            ctx.shadowBlur = 20;
+        }
+        
+        // Render zombie sprite
+        if (this.currentAnimation && this.currentAnimation.loaded) {
+            this.currentAnimation.render(ctx, this.x, this.y, this.scale);
+        } else {
+            // Fallback boss color - toxic green
+            ctx.fillStyle = '#32cd32';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Add toxic green overlay
+        ctx.globalCompositeOperation = 'multiply';
+        if (this.isSpitting) {
+            ctx.fillStyle = 'rgba(50, 205, 50, 0.6)'; // Brighter when spitting
+        } else {
+            ctx.fillStyle = 'rgba(34, 139, 34, 0.4)'; // Normal toxic overlay
+        }
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * this.scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        
+        // Boss name
+        ctx.fillStyle = '#32cd32';
+        ctx.font = '16px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x, this.y - this.radius * this.scale - 25);
+        
+        // Large health bar
+        const healthBarWidth = 90;
+        const healthBarHeight = 8;
+        const healthPercentage = this.health / this.maxHealth;
+        
+        ctx.fillStyle = '#333';
+        ctx.fillRect(this.x - healthBarWidth/2, this.y - this.radius * this.scale - 15, healthBarWidth, healthBarHeight);
+        
+        ctx.fillStyle = '#32cd32'; // Lime green for boss health
+        ctx.fillRect(this.x - healthBarWidth/2, this.y - this.radius * this.scale - 15, healthBarWidth * healthPercentage, healthBarHeight);
+        
+        ctx.restore();
+    }
+}
+
+class ZombieKing extends BasicZombieEnemy {
+    constructor(x, y, assets) {
+        super(x, y, assets);
+        this.health = 1500; // Stronger than Giant Boss (1200)
+        this.maxHealth = 1500;
+        this.speed = 15;
+        this.radius = 90;
+        this.scale = 4.0;
+        this.scoreValue = 1200;
+        this.expValue = 500;
+        this.damage = 60;
+        this.name = "Zombie King";
+        
+        // Horde summon attack
+        this.summonCooldown = 0;
+        this.summonCooldownMax = 6000; // 6 seconds
+        this.isSummoning = false;
+        this.summonDuration = 2000; // 2 second summon animation
+        this.summonTimer = 0;
+    }
+    
+    update(deltaTime, player) {
+        super.update(deltaTime, player);
+        
+        // Handle summon attack
+        this.summonCooldown += deltaTime;
+        
+        if (this.isSummoning) {
+            this.summonTimer += deltaTime;
+            if (this.summonTimer >= this.summonDuration) {
+                this.isSummoning = false;
+                this.summonTimer = 0;
+                
+                // Summon 3 basic zombies around the king
+                if (window.game) {
+                    for (let i = 0; i < 3; i++) {
+                        const angle = (i * 2 * Math.PI) / 3;
+                        const spawnDistance = 120;
+                        const spawnX = this.x + Math.cos(angle) * spawnDistance;
+                        const spawnY = this.y + Math.sin(angle) * spawnDistance;
+                        
+                        window.game.enemies.push(new BasicZombieEnemy(spawnX, spawnY, window.game.assets));
+                    }
+                }
+            }
+        } else if (this.summonCooldown >= this.summonCooldownMax) {
+            this.isSummoning = true;
+            this.summonCooldown = 0;
+        }
+    }
+    
+    render(ctx) {
+        ctx.save();
+        
+        // King glow effect
+        if (this.isSummoning) {
+            ctx.shadowColor = '#9acd32'; // Yellow-green glow when summoning
+            ctx.shadowBlur = 40;
+        } else {
+            ctx.shadowColor = '#6b8e23'; // Olive drab glow
+            ctx.shadowBlur = 25;
+        }
+        
+        // Render zombie sprite
+        if (this.currentAnimation && this.currentAnimation.loaded) {
+            this.currentAnimation.render(ctx, this.x, this.y, this.scale);
+        } else {
+            // Fallback king color - olive drab
+            ctx.fillStyle = '#6b8e23';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Add royal green overlay
+        ctx.globalCompositeOperation = 'multiply';
+        if (this.isSummoning) {
+            ctx.fillStyle = 'rgba(154, 205, 50, 0.7)'; // Brighter when summoning
+        } else {
+            ctx.fillStyle = 'rgba(107, 142, 35, 0.5)'; // Normal royal overlay
+        }
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * this.scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        
+        // King name
+        ctx.fillStyle = '#9acd32';
+        ctx.font = '18px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x, this.y - this.radius * this.scale - 30);
+        
+        // Extra large health bar
+        const healthBarWidth = 110;
+        const healthBarHeight = 10;
+        const healthPercentage = this.health / this.maxHealth;
+        
+        ctx.fillStyle = '#333';
+        ctx.fillRect(this.x - healthBarWidth/2, this.y - this.radius * this.scale - 20, healthBarWidth, healthBarHeight);
+        
+        ctx.fillStyle = '#9acd32'; // Yellow-green for king health
+        ctx.fillRect(this.x - healthBarWidth/2, this.y - this.radius * this.scale - 20, healthBarWidth * healthPercentage, healthBarHeight);
+        
+        ctx.restore();
+    }
+}
+
+// Poison Spit Projectile for Zombie Boss
+class PoisonSpitProjectile extends Projectile {
+    constructor(x, y, vx, vy, damage) {
+        super(x, y, vx, vy, damage, 0, 1.0);
+        this.radius = 8;
+        this.lifetime = 3000; // 3 seconds max
+        this.age = 0;
+        this.isEnemyProjectile = true; // Mark as enemy projectile
+    }
+    
+    update(deltaTime) {
+        super.update(deltaTime);
+        this.age += deltaTime;
+        
+        if (this.age >= this.lifetime) {
+            this.active = false;
+        }
+        
+        // Check collision with player
+        if (window.game && window.game.player) {
+            const dx = this.x - window.game.player.x;
+            const dy = this.y - window.game.player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance <= this.radius + 20) { // Player radius ~20
+                // Damage player
+                window.game.player.takeDamage(this.damage);
+                this.active = false;
+                
+                // Create poison effect particles
+                for (let i = 0; i < 5; i++) {
+                    window.game.particles.push(new PoisonParticle(this.x, this.y));
+                }
+            }
+        }
+    }
+    
+    render(ctx) {
+        ctx.save();
+        
+        // Poison spit appearance
+        ctx.fillStyle = '#32cd32';
+        ctx.shadowColor = '#32cd32';
+        ctx.shadowBlur = 5;
+        
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add bubbling effect
+        const alpha = 0.3 + Math.sin(this.age * 0.01) * 0.3;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#9acd32';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+}
+
+// Poison effect particle
+class PoisonParticle {
+    constructor(x, y) {
+        this.x = x + (Math.random() - 0.5) * 20;
+        this.y = y + (Math.random() - 0.5) * 20;
+        this.vx = (Math.random() - 0.5) * 100;
+        this.vy = (Math.random() - 0.5) * 100;
+        this.life = 500; // 0.5 seconds
+        this.maxLife = 500;
+        this.active = true;
+    }
+    
+    update(deltaTime) {
+        this.life -= deltaTime;
+        if (this.life <= 0) {
+            this.active = false;
+            return;
+        }
+        
+        const dt = deltaTime / 1000;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+    }
+    
+    render(ctx) {
+        const alpha = this.life / this.maxLife;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#32cd32';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
     }
 }
