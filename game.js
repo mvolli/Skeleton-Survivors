@@ -124,7 +124,7 @@ class Game {
         this.powerups = new PowerupManager();
         
         this.enemySpawnTimer = 0;
-        this.enemySpawnRate = 800; // ms - faster spawn rate
+        this.enemySpawnRate = 1200; // ms - easier start, was 800
         
         // Boss system
         this.bossSpawnTimer = 0;
@@ -282,8 +282,8 @@ class Game {
             this.spawnEnemy();
             this.enemySpawnTimer = 0;
             
-            // Increase spawn rate over time - much more aggressive
-            this.enemySpawnRate = Math.max(100, this.enemySpawnRate - 8);
+            // Increase spawn rate over time - gentler progression for easier start
+            this.enemySpawnRate = Math.max(200, this.enemySpawnRate - 5);
         }
         
         // Boss spawning system
@@ -2534,21 +2534,16 @@ class GrenadeWeapon {
     }
     
     fire(target, projectiles, player) {
-        const dx = target.x - player.x;
-        const dy = target.y - player.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const finalDamage = this.damage * player.damage;
         
-        if (distance > 0) {
-            const speed = 200;
-            const vx = (dx / distance) * speed;
-            const vy = (dy / distance) * speed;
-            
-            const finalDamage = this.damage * player.damage;
-            projectiles.push(new GrenadeProjectile(
-                player.x, player.y, vx, vy, finalDamage, 
-                this.explosionRadius, player.penetration, player.projectileSize
-            ));
-        }
+        // Create target indicator at landing site
+        game.particles.push(new TargetIndicator(target.x, target.y, this.explosionRadius));
+        
+        // Create grenade projectile
+        projectiles.push(new GrenadeProjectile(
+            player.x, player.y, target.x, target.y, finalDamage, 
+            this.explosionRadius, player.projectileSize
+        ));
     }
     
     upgrade() {
@@ -2852,30 +2847,67 @@ class BoomerangWeapon {
 // New Projectile Classes
 
 class GrenadeProjectile extends Projectile {
-    constructor(x, y, vx, vy, damage, explosionRadius = 80, penetration = 0, sizeMultiplier = 1.0) {
-        super(x, y, vx, vy, damage, penetration, sizeMultiplier);
-        this.baseRadius = 6;
+    constructor(x, y, targetX, targetY, damage, explosionRadius = 100, sizeMultiplier = 1.0) {
+        // Calculate trajectory to target
+        const distance = Math.sqrt((targetX - x) ** 2 + (targetY - y) ** 2);
+        const flightTime = 1.2; // Fixed flight time for consistent arc
+        const vx = (targetX - x) / flightTime;
+        const vy = (targetY - y) / flightTime;
+        
+        super(x, y, vx, vy, damage, 0, sizeMultiplier);
+        this.baseRadius = 5;
         this.radius = this.baseRadius * sizeMultiplier;
         this.explosionRadius = explosionRadius * sizeMultiplier;
-        this.lifetime = 2000; // Explodes after 2 seconds
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.flightTime = flightTime * 1000; // Convert to ms
         this.age = 0;
+        this.landed = false;
+        this.fuseTime = 150; // 150ms delay after landing
+        this.fuseTimer = 0;
+        this.rotation = 0;
     }
     
     update(deltaTime) {
-        super.update(deltaTime);
-        this.age += deltaTime;
-        
-        if (this.age >= this.lifetime) {
-            this.explode();
-            this.active = false;
+        if (!this.landed) {
+            const dt = deltaTime / 1000;
+            this.x += this.vx * dt;
+            this.y += this.vy * dt;
+            this.age += deltaTime;
+            this.rotation += deltaTime * 0.01; // Spinning grenade
+            
+            // Check if grenade has reached target or timeout
+            if (this.age >= this.flightTime || 
+                Math.sqrt((this.x - this.targetX) ** 2 + (this.y - this.targetY) ** 2) < 20) {
+                this.landed = true;
+                this.x = this.targetX; // Snap to exact target position
+                this.y = this.targetY;
+                this.vx = 0;
+                this.vy = 0;
+                
+                // Create landing effect
+                for (let i = 0; i < 6; i++) {
+                    game.particles.push(new ExplosionParticle(this.x, this.y, 0.3));
+                }
+            }
+        } else {
+            // Grenade is on ground, start fuse timer
+            this.fuseTimer += deltaTime;
+            if (this.fuseTimer >= this.fuseTime) {
+                this.explode();
+                this.active = false;
+            }
         }
     }
     
     explode() {
-        // Create explosion particles
-        for (let i = 0; i < 12; i++) {
-            game.particles.push(new ExplosionParticle(this.x, this.y));
+        // Create large explosion particles
+        for (let i = 0; i < 20; i++) {
+            game.particles.push(new ExplosionParticle(this.x, this.y, 1.5));
         }
+        
+        // Create damage zone effect that persists briefly
+        game.particles.push(new DamageZone(this.x, this.y, this.explosionRadius, 500));
         
         // Damage enemies in explosion radius
         const allTargets = [...game.enemies];
@@ -2888,7 +2920,7 @@ class GrenadeProjectile extends Projectile {
             );
             
             if (distance <= this.explosionRadius) {
-                enemy.takeDamage(this.damage * 0.8); // Reduced explosion damage
+                enemy.takeDamage(this.damage);
             }
         });
     }
@@ -2896,67 +2928,164 @@ class GrenadeProjectile extends Projectile {
     render(ctx) {
         ctx.save();
         
-        // Grenade body - dark metallic with orange accents
-        ctx.fillStyle = '#333333';
-        ctx.strokeStyle = '#ff8800';
-        ctx.lineWidth = 2;
-        ctx.shadowColor = '#ff8800';
-        ctx.shadowBlur = 8;
-        
-        // Main grenade body (oval shape)
-        ctx.beginPath();
-        ctx.ellipse(this.x, this.y, this.radius, this.radius * 0.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        
-        // Grenade pin (small rectangle on top)
-        ctx.fillStyle = '#ffff00';
-        ctx.fillRect(this.x - 2, this.y - this.radius, 4, 3);
-        
-        // Safety lever
-        ctx.strokeStyle = '#ffff00';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(this.x + 3, this.y - this.radius + 1, 2, 0, Math.PI);
-        ctx.stroke();
-        
-        // Sparks trail for armed grenades
-        if (this.age > 500) {
-            for (let i = 0; i < 3; i++) {
-                const sparkX = this.x + (Math.random() - 0.5) * 8;
-                const sparkY = this.y + (Math.random() - 0.5) * 8;
-                ctx.fillStyle = Math.random() > 0.5 ? '#ffaa00' : '#ff6600';
-                ctx.beginPath();
-                ctx.arc(sparkX, sparkY, 1, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-        
-        // Pulsing danger effect as it approaches explosion
-        if (this.age > this.lifetime * 0.7) {
-            const pulseScale = 1 + Math.sin(this.age * 0.02) * 0.4;
-            const intensity = (this.age - this.lifetime * 0.7) / (this.lifetime * 0.3);
+        if (!this.landed) {
+            // Flying grenade - green military style
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.rotation);
             
-            ctx.globalAlpha = 0.6 * intensity;
-            ctx.fillStyle = '#ff0000';
-            ctx.shadowColor = '#ff0000';
-            ctx.shadowBlur = 15;
+            ctx.fillStyle = '#2d5016'; // Dark military green
+            ctx.strokeStyle = '#4a7c59'; // Lighter green outline
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = '#4a7c59';
+            ctx.shadowBlur = 6;
+            
+            // Main grenade body (oval shape)
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius * pulseScale, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, this.radius, this.radius * 0.7, 0, 0, Math.PI * 2);
             ctx.fill();
+            ctx.stroke();
             
-            // Explosion radius preview
-            ctx.globalAlpha = 0.2 * intensity;
-            ctx.strokeStyle = '#ff0000';
+            // Grenade segments
+            ctx.strokeStyle = '#1a3009';
+            ctx.lineWidth = 1;
+            for (let i = -1; i <= 1; i++) {
+                ctx.beginPath();
+                ctx.moveTo(-this.radius, i * this.radius * 0.3);
+                ctx.lineTo(this.radius, i * this.radius * 0.3);
+                ctx.stroke();
+            }
+            
+            // Safety pin (if early in flight)
+            if (this.age < 200) {
+                ctx.fillStyle = '#ffd700';
+                ctx.fillRect(-1, -this.radius - 2, 2, 3);
+            }
+        } else {
+            // Landed grenade - pulsing danger
+            const pulseIntensity = Math.sin(this.fuseTimer * 0.02) * 0.5 + 0.5;
+            
+            ctx.fillStyle = '#2d5016';
+            ctx.strokeStyle = `rgba(255, 0, 0, ${0.3 + pulseIntensity * 0.7})`;
             ctx.lineWidth = 2;
+            ctx.shadowColor = '#ff0000';
+            ctx.shadowBlur = 10 + pulseIntensity * 10;
+            
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.explosionRadius * (0.5 + intensity * 0.5), 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Danger indicator ring
+            ctx.strokeStyle = `rgba(255, 0, 0, ${0.2 + pulseIntensity * 0.3})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.explosionRadius * 0.3, 0, Math.PI * 2);
             ctx.stroke();
         }
         
         ctx.restore();
     }
 }
+
+class DamageZone {
+    constructor(x, y, radius, duration) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.duration = duration;
+        this.age = 0;
+        this.active = true;
+    }
+    
+    update(deltaTime) {
+        this.age += deltaTime;
+        if (this.age >= this.duration) {
+            this.active = false;
+        }
+    }
+    
+    render(ctx) {
+        const alpha = Math.max(0, 1 - (this.age / this.duration));
+        
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.3;
+        
+        // Damage zone circle
+        ctx.strokeStyle = '#ff4444';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Scorch mark effect
+        ctx.globalAlpha = alpha * 0.2;
+        ctx.fillStyle = '#330000';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+}
+
+class TargetIndicator {
+    constructor(x, y, radius, duration = 1350) { // Slightly longer than grenade flight time + fuse
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.active = true;
+        this.age = 0;
+        this.duration = duration;
+        this.pulseSpeed = 0.005;
+    }
+    
+    update(deltaTime) {
+        this.age += deltaTime;
+        if (this.age >= this.duration) {
+            this.active = false;
+        }
+    }
+    
+    render(ctx) {
+        const pulse = Math.sin(this.age * this.pulseSpeed) * 0.3 + 0.7;
+        const fadeAlpha = Math.max(0, 1 - (this.age / this.duration));
+        
+        ctx.save();
+        ctx.globalAlpha = 0.6 * pulse * fadeAlpha;
+        
+        // Target crosshair
+        ctx.strokeStyle = '#44ff44';
+        ctx.lineWidth = 2;
+        
+        // Circle
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * 0.8, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Cross lines
+        const lineLength = this.radius * 0.4;
+        ctx.beginPath();
+        ctx.moveTo(this.x - lineLength, this.y);
+        ctx.lineTo(this.x + lineLength, this.y);
+        ctx.moveTo(this.x, this.y - lineLength);
+        ctx.lineTo(this.x, this.y + lineLength);
+        ctx.stroke();
+        
+        // Corner brackets
+        const bracketSize = this.radius * 0.3;
+        const offset = this.radius * 0.9;
+        for (let i = 0; i < 4; i++) {
+            const angle = (i * Math.PI) / 2;
+            const x = this.x + Math.cos(angle) * offset;
+            const y = this.y + Math.sin(angle) * offset;
+            
+            ctx.beginPath();
+            ctx.moveTo(x + Math.cos(angle + Math.PI/4) * bracketSize, y + Math.sin(angle + Math.PI/4) * bracketSize);
+            ctx.lineTo(x, y);
+            ctx.lineTo(x + Math.cos(angle - Math.PI/4) * bracketSize, y + Math.sin(angle - Math.PI/4) * bracketSize);
+            ctx.stroke();
+        }\n        \n        ctx.restore();\n    }\n}
 
 class MineProjectile extends Projectile {
     constructor(x, y, damage, explosionRadius = 70, sizeMultiplier = 1.0) {
