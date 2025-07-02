@@ -112,7 +112,8 @@ class Game {
         this.particles = [];
         this.items = [];
         
-        this.gameTime = 0;
+        // Start at 10 minutes for slot 3 to test zombies immediately
+        this.gameTime = (saveManager && saveManager.currentSlot === 3) ? 600000 : 0;
         this.score = 0;
         this.level = 1;
         this.experience = 0;
@@ -139,7 +140,8 @@ class Game {
         
         // Zombie system - appears after 10 minutes
         this.zombieUnlockTime = 600000; // 10 minutes in milliseconds
-        this.zombiesUnlocked = false;
+        // Unlock zombies immediately for slot 3 testing
+        this.zombiesUnlocked = (saveManager && saveManager.currentSlot === 3) ? true : false;
         
         // Apply boss timer meta upgrade
         if (saveManager && saveManager.currentSlot) {
