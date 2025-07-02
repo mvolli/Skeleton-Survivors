@@ -5134,6 +5134,10 @@ function returnToMenu() {
     if (game && saveManager.currentSlot) {
         // Save game data including diamonds
         saveManager.save(saveManager.currentSlot, game);
+        
+        // Hide pause menu and reset pause state
+        game.hidePauseMenu();
+        game.isPaused = false;
     }
     
     document.getElementById('characterMenu').style.display = 'flex';
