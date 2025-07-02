@@ -373,8 +373,9 @@ class Game {
         this.projectiles.forEach(projectile => {
             projectile.update(deltaTime);
             
-            // Check collision with enemies
-            this.enemies.forEach(enemy => {
+            // Only check collision with enemies for player projectiles (not enemy projectiles)
+            if (!projectile.isEnemyProjectile) {
+                this.enemies.forEach(enemy => {
                 if (this.checkCollision(projectile, enemy)) {
                     // Use new penetration system
                     if (projectile.hitEnemy && projectile.hitEnemy(enemy)) {
@@ -401,10 +402,11 @@ class Game {
                         this.handleMultishotSplit(projectile, enemy.x, enemy.y);
                     }
                 }
-            });
+                });
+            }
             
-            // Check collision with boss
-            if (this.currentBoss && this.checkCollision(projectile, this.currentBoss)) {
+            // Check collision with boss (only for player projectiles)
+            if (!projectile.isEnemyProjectile && this.currentBoss && this.checkCollision(projectile, this.currentBoss)) {
                 // Use new penetration system
                 if (projectile.hitEnemy && projectile.hitEnemy(this.currentBoss)) {
                     this.currentBoss.takeDamage(projectile.damage);
