@@ -112,8 +112,7 @@ class Game {
         this.particles = [];
         this.items = [];
         
-        // Start at 10 minutes for slot 3 to test zombies immediately
-        this.gameTime = (saveManager && saveManager.currentSlot === 3) ? 600000 : 0;
+        this.gameTime = 0;
         this.score = 0;
         this.level = 1;
         this.experience = 0;
@@ -140,8 +139,7 @@ class Game {
         
         // Zombie system - appears after 10 minutes
         this.zombieUnlockTime = 600000; // 10 minutes in milliseconds
-        // Unlock zombies immediately for slot 3 testing
-        this.zombiesUnlocked = (saveManager && saveManager.currentSlot === 3) ? true : false;
+        this.zombiesUnlocked = false;
         
         // Apply boss timer meta upgrade
         if (saveManager && saveManager.currentSlot) {
@@ -2344,10 +2342,19 @@ class ZombieThrowProjectile extends Projectile {
                 window.game.player.takeDamage(this.damage);
                 this.active = false;
                 
-                // Create debris effect particles
-                for (let i = 0; i < 3; i++) {
+                // Enhanced impact effects
+                // Create bigger debris burst with more particles
+                for (let i = 0; i < 8; i++) {
                     window.game.particles.push(new DebrisParticle(this.x, this.y));
                 }
+                
+                // Add hit flash particles for impact
+                for (let i = 0; i < 6; i++) {
+                    window.game.particles.push(new HitParticle(this.x, this.y));
+                }
+                
+                // Create impact shockwave effect
+                window.game.particles.push(new ZombieImpactWave(this.x, this.y));
             }
         }
     }
@@ -2374,16 +2381,20 @@ class ZombieThrowProjectile extends Projectile {
     }
 }
 
-// Debris effect particle
+// Enhanced debris effect particle
 class DebrisParticle {
     constructor(x, y) {
-        this.x = x + (Math.random() - 0.5) * 15;
-        this.y = y + (Math.random() - 0.5) * 15;
-        this.vx = (Math.random() - 0.5) * 80;
-        this.vy = (Math.random() - 0.5) * 80;
-        this.life = 300; // 0.3 seconds
-        this.maxLife = 300;
+        this.x = x + (Math.random() - 0.5) * 20;
+        this.y = y + (Math.random() - 0.5) * 20;
+        this.vx = (Math.random() - 0.5) * 150;
+        this.vy = (Math.random() - 0.5) * 150;
+        this.life = 500 + Math.random() * 300; // 0.5-0.8 seconds
+        this.maxLife = this.life;
         this.active = true;
+        this.size = 2 + Math.random() * 3; // Variable size
+        this.rotation = Math.random() * Math.PI * 2;
+        this.rotationSpeed = (Math.random() - 0.5) * 10;
+        this.gravity = 100; // Add gravity for more realistic movement
     }
     
     update(deltaTime) {
@@ -2396,16 +2407,82 @@ class DebrisParticle {
         const dt = deltaTime / 1000;
         this.x += this.vx * dt;
         this.y += this.vy * dt;
+        this.vy += this.gravity * dt; // Apply gravity
+        this.rotation += this.rotationSpeed * dt;
+        
+        // Add some air resistance
+        this.vx *= 0.98;
+        this.vy *= 0.98;
     }
     
     render(ctx) {
         const alpha = this.life / this.maxLife;
         ctx.save();
         ctx.globalAlpha = alpha;
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        
+        // Draw as small brown rock/debris
+        ctx.fillStyle = '#8b4513';
+        ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+        
+        // Add darker edge for depth
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(-this.size/4, -this.size/4, this.size/2, this.size/2);
+        
+        ctx.restore();
+    }
+}
+
+// Zombie impact shockwave effect
+class ZombieImpactWave {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 0;
+        this.maxRadius = 60;
+        this.life = 400; // 0.4 seconds
+        this.maxLife = 400;
+        this.active = true;
+        this.pulseSpeed = 0.01;
+        this.age = 0;
+    }
+    
+    update(deltaTime) {
+        this.life -= deltaTime;
+        this.age += deltaTime;
+        
+        if (this.life <= 0) {
+            this.active = false;
+            return;
+        }
+        
+        // Expand shockwave
+        const progress = 1 - (this.life / this.maxLife);
+        this.radius = this.maxRadius * progress;
+    }
+    
+    render(ctx) {
+        const alpha = this.life / this.maxLife;
+        const pulse = Math.sin(this.age * this.pulseSpeed) * 0.3 + 0.7;
+        
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.6 * pulse;
+        
+        // Brown shockwave ring
+        ctx.strokeStyle = '#8b4513';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Inner filled ring for more impact
+        ctx.globalAlpha = alpha * 0.3 * pulse;
         ctx.fillStyle = '#8b4513';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.radius * 0.5, 0, Math.PI * 2);
         ctx.fill();
+        
         ctx.restore();
     }
 }
