@@ -1780,119 +1780,6 @@ class RangedZombieEnemy extends BasicZombieEnemy {
     }
 }
 
-// Zombie thrown projectile
-class ZombieThrowProjectile extends Projectile {
-    constructor(x, y, vx, vy, damage) {
-        super(x, y, vx, vy, damage, 0, 1.0);
-        this.radius = 6;
-        this.lifetime = 4000; // 4 seconds max
-        this.age = 0;
-        this.isEnemyProjectile = true; // Mark as enemy projectile
-        this.rotation = 0;
-    }
-    
-    update(deltaTime) {
-        super.update(deltaTime);
-        this.age += deltaTime;
-        this.rotation += deltaTime * 0.01; // Spinning rock/debris
-        
-        if (this.age >= this.lifetime) {
-            this.active = false;
-        }
-        
-        // Check collision with player
-        if (window.game && window.game.player) {
-            const dx = this.x - window.game.player.x;
-            const dy = this.y - window.game.player.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance <= this.radius + 20) { // Player radius ~20
-                // Damage player
-                window.game.player.takeDamage(this.damage);
-                this.active = false;
-                
-                // Create impact particles
-                for (let i = 0; i < 3; i++) {
-                    window.game.particles.push(new DebrisParticle(this.x, this.y));
-                }
-            }
-        }
-    }
-    
-    render(ctx) {
-        ctx.save();
-        
-        // Debris/rock appearance
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.rotation);
-        
-        ctx.fillStyle = '#654321'; // Dark brown
-        ctx.strokeStyle = '#8b4513'; // Lighter brown outline
-        ctx.lineWidth = 1;
-        ctx.shadowColor = '#654321';
-        ctx.shadowBlur = 3;
-        
-        // Irregular rock shape
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const variance = 0.7 + Math.random() * 0.6; // Random size variation
-            const x = Math.cos(angle) * this.radius * variance;
-            const y = Math.sin(angle) * this.radius * variance;
-            
-            if (i === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
-            }
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        
-        ctx.restore();
-    }
-}
-
-// Debris impact particle
-class DebrisParticle {
-    constructor(x, y) {
-        this.x = x + (Math.random() - 0.5) * 15;
-        this.y = y + (Math.random() - 0.5) * 15;
-        this.vx = (Math.random() - 0.5) * 80;
-        this.vy = (Math.random() - 0.5) * 80;
-        this.life = 400; // 0.4 seconds
-        this.maxLife = 400;
-        this.active = true;
-        this.size = 2 + Math.random() * 3;
-    }
-    
-    update(deltaTime) {
-        this.life -= deltaTime;
-        if (this.life <= 0) {
-            this.active = false;
-            return;
-        }
-        
-        const dt = deltaTime / 1000;
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
-        this.vx *= 0.95; // Friction
-        this.vy *= 0.95;
-    }
-    
-    render(ctx) {
-        const alpha = this.life / this.maxLife;
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = '#8b4513';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
-}
-
 class ZombieBoss extends BasicZombieEnemy {
     constructor(x, y, assets) {
         super(x, y, assets);
@@ -2419,6 +2306,101 @@ class PoisonParticle {
         ctx.fillStyle = '#32cd32';
         ctx.beginPath();
         ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// Zombie Debris Projectile for Ranged Zombie Enemy
+class ZombieThrowProjectile extends Projectile {
+    constructor(x, y, vx, vy, damage) {
+        super(x, y, vx, vy, damage, 0, 1.0);
+        this.radius = 6;
+        this.lifetime = 4000; // 4 seconds max
+        this.age = 0;
+        this.isEnemyProjectile = true; // Mark as enemy projectile
+    }
+    
+    update(deltaTime) {
+        super.update(deltaTime);
+        this.age += deltaTime;
+        
+        if (this.age >= this.lifetime) {
+            this.active = false;
+        }
+        
+        // Check collision with player
+        if (window.game && window.game.player) {
+            const dx = this.x - window.game.player.x;
+            const dy = this.y - window.game.player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance <= this.radius + 20) { // Player radius ~20
+                // Damage player
+                window.game.player.takeDamage(this.damage);
+                this.active = false;
+                
+                // Create debris effect particles
+                for (let i = 0; i < 3; i++) {
+                    window.game.particles.push(new DebrisParticle(this.x, this.y));
+                }
+            }
+        }
+    }
+    
+    render(ctx) {
+        ctx.save();
+        
+        // Debris appearance - rocky brown color
+        ctx.fillStyle = '#8b4513';
+        ctx.shadowColor = '#8b4513';
+        ctx.shadowBlur = 3;
+        
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add darker center
+        ctx.fillStyle = '#654321';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+}
+
+// Debris effect particle
+class DebrisParticle {
+    constructor(x, y) {
+        this.x = x + (Math.random() - 0.5) * 15;
+        this.y = y + (Math.random() - 0.5) * 15;
+        this.vx = (Math.random() - 0.5) * 80;
+        this.vy = (Math.random() - 0.5) * 80;
+        this.life = 300; // 0.3 seconds
+        this.maxLife = 300;
+        this.active = true;
+    }
+    
+    update(deltaTime) {
+        this.life -= deltaTime;
+        if (this.life <= 0) {
+            this.active = false;
+            return;
+        }
+        
+        const dt = deltaTime / 1000;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+    }
+    
+    render(ctx) {
+        const alpha = this.life / this.maxLife;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#8b4513';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
