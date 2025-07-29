@@ -96,6 +96,470 @@ class AssetManager {
     }
 }
 
+// Dynamic Background System
+class DynamicBackground {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.time = 0;
+        
+        // Background layers
+        this.stars = [];
+        this.nebula = [];
+        this.gridLines = [];
+        this.particles = [];
+        
+        // Animation properties
+        this.pulseIntensity = 0;
+        this.gameIntensity = 0; // Increases with game progression
+        this.warningIntensity = 0; // For boss warnings
+        
+        this.initializeStars();
+        this.initializeNebula();
+        this.initializeGrid();
+        this.initializeParticles();
+    }
+    
+    initializeStars() {
+        for (let i = 0; i < 150; i++) {
+            this.stars.push({
+                x: Math.random() * this.canvas.width * 2,
+                y: Math.random() * this.canvas.height * 2,
+                size: Math.random() * 3 + 1,
+                brightness: Math.random(),
+                twinkleSpeed: Math.random() * 0.02 + 0.01,
+                twinkleOffset: Math.random() * Math.PI * 2
+            });
+        }
+    }
+    
+    initializeNebula() {
+        for (let i = 0; i < 8; i++) {
+            this.nebula.push({
+                x: Math.random() * this.canvas.width * 1.5,
+                y: Math.random() * this.canvas.height * 1.5,
+                size: Math.random() * 300 + 100,
+                color: `hsl(${Math.random() * 60 + 220}, 60%, ${Math.random() * 20 + 10}%)`,
+                drift: {
+                    x: (Math.random() - 0.5) * 0.3,
+                    y: (Math.random() - 0.5) * 0.3
+                },
+                pulseSpeed: Math.random() * 0.01 + 0.005,
+                pulseOffset: Math.random() * Math.PI * 2
+            });
+        }
+    }
+    
+    initializeGrid() {
+        const gridSpacing = 80;
+        for (let x = 0; x < this.canvas.width * 1.5; x += gridSpacing) {
+            this.gridLines.push({
+                type: 'vertical',
+                pos: x,
+                offset: Math.random() * Math.PI,
+                wave: Math.random() * 10 + 5
+            });
+        }
+        for (let y = 0; y < this.canvas.height * 1.5; y += gridSpacing) {
+            this.gridLines.push({
+                type: 'horizontal',
+                pos: y,
+                offset: Math.random() * Math.PI,
+                wave: Math.random() * 10 + 5
+            });
+        }
+    }
+    
+    initializeParticles() {
+        for (let i = 0; i < 30; i++) {
+            this.particles.push({
+                x: Math.random() * this.canvas.width,
+                y: Math.random() * this.canvas.height,
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.5,
+                size: Math.random() * 2 + 1,
+                life: Math.random(),
+                maxLife: Math.random() * 3000 + 2000,
+                color: Math.random() > 0.5 ? '#4ecdc4' : '#f39c12'
+            });
+        }
+    }
+    
+    update(deltaTime, gameState = {}) {
+        this.time += deltaTime;
+        
+        // Update game intensity based on level and time
+        this.gameIntensity = Math.min((gameState.level || 1) * 0.1 + (gameState.gameTime || 0) / 120000, 2);
+        
+        // Update warning intensity for boss warnings
+        if (gameState.bossWarning) {
+            this.warningIntensity = Math.min(this.warningIntensity + deltaTime * 0.003, 1);
+        } else {
+            this.warningIntensity = Math.max(this.warningIntensity - deltaTime * 0.002, 0);
+        }
+        
+        // Update nebula drift
+        this.nebula.forEach(cloud => {
+            cloud.x += cloud.drift.x * deltaTime * 0.01;
+            cloud.y += cloud.drift.y * deltaTime * 0.01;
+            
+            // Wrap around
+            if (cloud.x > this.canvas.width * 1.5) cloud.x = -cloud.size;
+            if (cloud.x < -cloud.size) cloud.x = this.canvas.width * 1.5;
+            if (cloud.y > this.canvas.height * 1.5) cloud.y = -cloud.size;
+            if (cloud.y < -cloud.size) cloud.y = this.canvas.height * 1.5;
+        });
+        
+        // Update floating particles
+        this.particles.forEach((particle, index) => {
+            particle.x += particle.vx * deltaTime * 0.1;
+            particle.y += particle.vy * deltaTime * 0.1;
+            particle.life += deltaTime;
+            
+            // Wrap particles around screen
+            if (particle.x > this.canvas.width) particle.x = 0;
+            if (particle.x < 0) particle.x = this.canvas.width;
+            if (particle.y > this.canvas.height) particle.y = 0;
+            if (particle.y < 0) particle.y = this.canvas.height;
+            
+            // Reset particle if it lived too long
+            if (particle.life > particle.maxLife) {
+                particle.life = 0;
+                particle.x = Math.random() * this.canvas.width;
+                particle.y = Math.random() * this.canvas.height;
+            }
+        });
+    }
+    
+    render(ctx, camera = {x: 0, y: 0}) {
+        const cameraX = camera.x || 0;
+        const cameraY = camera.y || 0;
+        
+        // Save context
+        ctx.save();
+        
+        // Base gradient background with intensity variation
+        const baseIntensity = 0.1 + this.gameIntensity * 0.1;
+        const warningRed = this.warningIntensity * 0.3;
+        
+        const gradient = ctx.createRadialGradient(
+            this.canvas.width / 2, this.canvas.height / 2, 0,
+            this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height)
+        );
+        
+        gradient.addColorStop(0, `rgba(${Math.floor(26 + warningRed * 100)}, ${Math.floor(26 + baseIntensity * 50)}, ${Math.floor(46 + baseIntensity * 30)}, 1)`);
+        gradient.addColorStop(0.5, `rgba(${Math.floor(22 + warningRed * 80)}, ${Math.floor(33 + baseIntensity * 40)}, ${Math.floor(62 + baseIntensity * 20)}, 1)`);
+        gradient.addColorStop(1, `rgba(${Math.floor(15 + warningRed * 60)}, ${Math.floor(15 + baseIntensity * 30)}, ${Math.floor(35 + baseIntensity * 15)}, 1)`);
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Render animated grid with camera parallax
+        ctx.globalAlpha = 0.1 + this.gameIntensity * 0.05;
+        ctx.strokeStyle = `rgba(78, 205, 196, ${0.3 + this.warningIntensity * 0.3})`;
+        ctx.lineWidth = 1;
+        
+        this.gridLines.forEach(line => {
+            ctx.beginPath();
+            if (line.type === 'vertical') {
+                const x = (line.pos - cameraX * 0.1) % (this.canvas.width + 80);
+                const wave = Math.sin(this.time * 0.001 + line.offset) * line.wave;
+                ctx.moveTo(x + wave, 0);
+                ctx.lineTo(x - wave, this.canvas.height);
+            } else {
+                const y = (line.pos - cameraY * 0.1) % (this.canvas.height + 80);
+                const wave = Math.sin(this.time * 0.001 + line.offset) * line.wave;
+                ctx.moveTo(0, y + wave);
+                ctx.lineTo(this.canvas.width, y - wave);
+            }
+            ctx.stroke();
+        });
+        
+        // Render nebula clouds with parallax
+        ctx.globalAlpha = 0.4 + this.gameIntensity * 0.2;
+        this.nebula.forEach(cloud => {
+            const x = cloud.x - cameraX * 0.05;
+            const y = cloud.y - cameraY * 0.05;
+            const pulse = 1 + Math.sin(this.time * cloud.pulseSpeed + cloud.pulseOffset) * 0.2;
+            const size = cloud.size * pulse;
+            
+            const nebulaGradient = ctx.createRadialGradient(x, y, 0, x, y, size);
+            nebulaGradient.addColorStop(0, cloud.color.replace(')', ', 0.3)').replace('hsl', 'hsla'));
+            nebulaGradient.addColorStop(0.7, cloud.color.replace(')', ', 0.1)').replace('hsl', 'hsla'));
+            nebulaGradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = nebulaGradient;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Render twinkling stars with parallax
+        ctx.globalAlpha = 1;
+        this.stars.forEach(star => {
+            const x = (star.x - cameraX * 0.02) % (this.canvas.width * 2);
+            const y = (star.y - cameraY * 0.02) % (this.canvas.height * 2);
+            const twinkle = 0.3 + 0.7 * (Math.sin(this.time * star.twinkleSpeed + star.twinkleOffset) + 1) / 2;
+            const brightness = star.brightness * twinkle * (0.8 + this.gameIntensity * 0.2);
+            
+            ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+            ctx.beginPath();
+            ctx.arc(x, y, star.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Add star glow for larger stars
+            if (star.size > 2) {
+                ctx.globalAlpha = brightness * 0.5;
+                ctx.fillStyle = `rgba(78, 205, 196, ${brightness * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(x, y, star.size * 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        });
+        
+        // Render floating particles
+        ctx.globalAlpha = 0.6;
+        this.particles.forEach(particle => {
+            const x = particle.x - cameraX * 0.01;
+            const y = particle.y - cameraY * 0.01;
+            const alpha = 1 - (particle.life / particle.maxLife);
+            
+            ctx.globalAlpha = alpha * 0.4;
+            ctx.fillStyle = particle.color;
+            ctx.beginPath();
+            ctx.arc(x, y, particle.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Restore context
+        ctx.restore();
+    }
+    
+    resize(width, height) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+        
+        // Reinitialize with new dimensions
+        this.initializeStars();
+        this.initializeNebula();
+        this.initializeGrid();
+    }
+}
+
+// Enhanced Particle Effects System
+class EnhancedParticle {
+    constructor(x, y, options = {}) {
+        this.x = x;
+        this.y = y;
+        this.vx = options.vx || (Math.random() - 0.5) * 200;
+        this.vy = options.vy || (Math.random() - 0.5) * 200;
+        this.size = options.size || Math.random() * 4 + 2;
+        this.life = 0;
+        this.maxLife = options.maxLife || 1000 + Math.random() * 1000;
+        this.color = options.color || '#4ecdc4';
+        this.alpha = options.alpha || 1;
+        this.gravity = options.gravity || 0;
+        this.friction = options.friction || 0.98;
+        this.type = options.type || 'circle';
+        this.rotation = options.rotation || 0;
+        this.angularVelocity = options.angularVelocity || 0;
+        this.glow = options.glow || false;
+        this.trail = options.trail || false;
+        this.trailHistory = [];
+    }
+    
+    update(deltaTime) {
+        this.life += deltaTime;
+        
+        // Physics
+        this.x += this.vx * deltaTime * 0.001;
+        this.y += this.vy * deltaTime * 0.001;
+        this.vy += this.gravity * deltaTime * 0.001;
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        this.rotation += this.angularVelocity * deltaTime * 0.001;
+        
+        // Trail effect
+        if (this.trail) {
+            this.trailHistory.push({x: this.x, y: this.y, alpha: this.alpha});
+            if (this.trailHistory.length > 5) this.trailHistory.shift();
+        }
+        
+        // Fade out over time
+        const lifeRatio = this.life / this.maxLife;
+        this.alpha = Math.max(0, 1 - lifeRatio);
+        
+        return this.life < this.maxLife;
+    }
+    
+    render(ctx) {
+        ctx.save();
+        
+        // Draw trail first
+        if (this.trail && this.trailHistory.length > 1) {
+            ctx.globalAlpha = this.alpha * 0.3;
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = this.size * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(this.trailHistory[0].x, this.trailHistory[0].y);
+            for (let i = 1; i < this.trailHistory.length; i++) {
+                ctx.lineTo(this.trailHistory[i].x, this.trailHistory[i].y);
+            }
+            ctx.stroke();
+        }
+        
+        ctx.globalAlpha = this.alpha;
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        
+        // Glow effect
+        if (this.glow) {
+            ctx.shadowColor = this.color;
+            ctx.shadowBlur = this.size * 2;
+        }
+        
+        ctx.fillStyle = this.color;
+        
+        if (this.type === 'circle') {
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (this.type === 'square') {
+            ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+        } else if (this.type === 'diamond') {
+            ctx.beginPath();
+            ctx.moveTo(0, -this.size);
+            ctx.lineTo(this.size, 0);
+            ctx.lineTo(0, this.size);
+            ctx.lineTo(-this.size, 0);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+}
+
+class ParticleSystem {
+    constructor() {
+        this.particles = [];
+    }
+    
+    addExplosion(x, y, count = 10, options = {}) {
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+            const speed = 100 + Math.random() * 200;
+            this.particles.push(new EnhancedParticle(x, y, {
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: options.size || 3 + Math.random() * 4,
+                color: options.color || '#ff6b6b',
+                maxLife: options.maxLife || 800 + Math.random() * 400,
+                friction: 0.95,
+                glow: true,
+                ...options
+            }));
+        }
+    }
+    
+    addImpact(x, y, direction, options = {}) {
+        const count = options.count || 6;
+        for (let i = 0; i < count; i++) {
+            const spreadAngle = direction + (Math.random() - 0.5) * Math.PI * 0.5;
+            const speed = 80 + Math.random() * 120;
+            this.particles.push(new EnhancedParticle(x, y, {
+                vx: Math.cos(spreadAngle) * speed,
+                vy: Math.sin(spreadAngle) * speed,
+                size: 2 + Math.random() * 3,
+                color: options.color || '#f39c12',
+                maxLife: 600 + Math.random() * 300,
+                type: Math.random() > 0.5 ? 'circle' : 'diamond',
+                glow: true,
+                ...options
+            }));
+        }
+    }
+    
+    addHealEffect(x, y, options = {}) {
+        for (let i = 0; i < 8; i++) {
+            this.particles.push(new EnhancedParticle(x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 40, {
+                vx: (Math.random() - 0.5) * 50,
+                vy: -50 - Math.random() * 100,
+                size: 3 + Math.random() * 3,
+                color: '#27ae60',
+                maxLife: 1200 + Math.random() * 600,
+                gravity: -30,
+                glow: true,
+                type: 'circle',
+                ...options
+            }));
+        }
+    }
+    
+    addLevelUpEffect(x, y, options = {}) {
+        for (let i = 0; i < 20; i++) {
+            const angle = (Math.PI * 2 / 20) * i;
+            const speed = 150 + Math.random() * 100;
+            this.particles.push(new EnhancedParticle(x, y, {
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: 4 + Math.random() * 4,
+                color: i % 2 === 0 ? '#f39c12' : '#4ecdc4',
+                maxLife: 1500 + Math.random() * 500,
+                friction: 0.96,
+                glow: true,
+                type: 'diamond',
+                angularVelocity: (Math.random() - 0.5) * 10,
+                ...options
+            }));
+        }
+    }
+    
+    update(deltaTime) {
+        this.particles = this.particles.filter(particle => particle.update(deltaTime));
+    }
+    
+    render(ctx) {
+        this.particles.forEach(particle => particle.render(ctx));
+    }
+    
+    clear() {
+        this.particles = [];
+    }
+}
+
+// Screen Shake System
+class ScreenShake {
+    constructor() {
+        this.intensity = 0;
+        this.duration = 0;
+        this.shakeX = 0;
+        this.shakeY = 0;
+    }
+    
+    shake(intensity = 10, duration = 300) {
+        this.intensity = Math.max(this.intensity, intensity);
+        this.duration = Math.max(this.duration, duration);
+    }
+    
+    update(deltaTime) {
+        if (this.duration > 0) {
+            this.duration -= deltaTime;
+            const currentIntensity = this.intensity * (this.duration / 300);
+            this.shakeX = (Math.random() - 0.5) * currentIntensity;
+            this.shakeY = (Math.random() - 0.5) * currentIntensity;
+        } else {
+            this.shakeX = 0;
+            this.shakeY = 0;
+            this.intensity = 0;
+        }
+    }
+    
+    apply(ctx) {
+        ctx.translate(this.shakeX, this.shakeY);
+    }
+}
+
 
 class Game {
     constructor(saveManager = null) {
@@ -106,6 +570,9 @@ class Game {
         
         this.saveManager = saveManager;
         this.assets = new AssetManager();
+        this.background = new DynamicBackground(this.canvas);
+        this.particleSystem = new ParticleSystem();
+        this.screenShake = new ScreenShake();
         this.player = new Player(this.canvas.width / 2, this.canvas.height / 2, this.assets, saveManager);
         this.enemies = [];
         this.projectiles = [];
@@ -170,6 +637,7 @@ class Game {
         window.addEventListener('resize', () => {
             this.canvas.width = window.innerWidth;
             this.canvas.height = window.innerHeight;
+            this.background.resize(window.innerWidth, window.innerHeight);
         });
     }
     
@@ -280,6 +748,19 @@ class Game {
         // Update camera to follow player
         this.camera.x = this.player.x - this.canvas.width / 2;
         this.camera.y = this.player.y - this.canvas.height / 2;
+        
+        // Update dynamic background
+        this.background.update(deltaTime, {
+            level: this.level,
+            gameTime: this.gameTime,
+            bossWarning: this.bossWarning
+        });
+        
+        // Update enhanced particle system
+        this.particleSystem.update(deltaTime);
+        
+        // Update screen shake
+        this.screenShake.update(deltaTime);
         
         // Update player
         this.player.update(deltaTime, this.keys);
@@ -507,12 +988,12 @@ class Game {
     }
     
     render() {
-        // Clear canvas
-        this.ctx.fillStyle = '#0a0a0a';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // Apply screen shake
+        this.ctx.save();
+        this.screenShake.apply(this.ctx);
         
-        // Draw background pattern
-        this.drawBackground();
+        // Render dynamic background (replaces static background)
+        this.background.render(this.ctx, this.camera);
         
         // Save context for camera transform
         this.ctx.save();
@@ -520,6 +1001,7 @@ class Game {
         
         // Draw game objects
         this.particles.forEach(particle => particle.render(this.ctx));
+        this.particleSystem.render(this.ctx);
         this.items.forEach(item => item.render(this.ctx));
         this.enemies.forEach(enemy => enemy.render(this.ctx));
         
@@ -545,6 +1027,53 @@ class Game {
         // Draw UI elements (not affected by camera)
         this.renderBossWarning();
         this.renderBossIndicator();
+        
+        // Restore screen shake context
+        this.ctx.restore();
+    }
+    
+    // Enhanced Visual Effects Triggers
+    triggerEnemyDeathEffect(x, y) {
+        this.particleSystem.addExplosion(x, y, 8, {
+            color: '#ff6b6b',
+            size: 3,
+            maxLife: 600
+        });
+        this.screenShake.shake(3, 150);
+    }
+    
+    triggerBossDeathEffect(x, y) {
+        this.particleSystem.addExplosion(x, y, 25, {
+            color: '#ff6b6b',
+            size: 6,
+            maxLife: 1200
+        });
+        this.screenShake.shake(15, 800);
+    }
+    
+    triggerPlayerHitEffect(x, y) {
+        this.particleSystem.addImpact(x, y, 0, {
+            color: '#e74c3c',
+            count: 4
+        });
+        this.screenShake.shake(8, 200);
+    }
+    
+    triggerLevelUpEffect(x, y) {
+        this.particleSystem.addLevelUpEffect(x, y);
+        this.screenShake.shake(5, 300);
+    }
+    
+    triggerHealEffect(x, y) {
+        this.particleSystem.addHealEffect(x, y);
+    }
+    
+    triggerProjectileImpact(x, y, direction) {
+        this.particleSystem.addImpact(x, y, direction, {
+            color: '#f39c12',
+            count: 3,
+            size: 2
+        });
     }
     
     
