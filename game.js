@@ -96,15 +96,20 @@ class AssetManager {
     }
 }
 
-// Dynamic Background System
+// Enhanced Dynamic Background System
 class DynamicBackground {
     constructor(canvas) {
         this.canvas = canvas;
         this.time = 0;
         
-        // Background layers
+        // Multiple background layers for depth
+        this.distantStars = [];
         this.stars = [];
+        this.nearStars = [];
         this.nebula = [];
+        this.gasGiants = [];
+        this.spaceDebris = [];
+        this.energyFields = [];
         this.gridLines = [];
         this.particles = [];
         
@@ -113,21 +118,57 @@ class DynamicBackground {
         this.gameIntensity = 0; // Increases with game progression
         this.warningIntensity = 0; // For boss warnings
         
+        this.initializeDistantStars();
         this.initializeStars();
+        this.initializeNearStars();
         this.initializeNebula();
+        this.initializeGasGiants();
+        this.initializeSpaceDebris();
+        this.initializeEnergyFields();
         this.initializeGrid();
         this.initializeParticles();
     }
     
+    initializeDistantStars() {
+        // Very distant, small, slow-moving stars
+        for (let i = 0; i < 300; i++) {
+            this.distantStars.push({
+                x: Math.random() * this.canvas.width * 6 - this.canvas.width * 2,
+                y: Math.random() * this.canvas.height * 6 - this.canvas.height * 2,
+                size: Math.random() * 1.5 + 0.5,
+                brightness: Math.random() * 0.6 + 0.2,
+                twinkleSpeed: Math.random() * 0.01 + 0.005,
+                twinkleOffset: Math.random() * Math.PI * 2,
+                color: Math.random() > 0.8 ? '#e8f4fd' : '#ffffff'
+            });
+        }
+    }
+    
     initializeStars() {
-        for (let i = 0; i < 150; i++) {
+        for (let i = 0; i < 200; i++) {
             this.stars.push({
-                x: Math.random() * this.canvas.width * 2,
-                y: Math.random() * this.canvas.height * 2,
+                x: Math.random() * this.canvas.width * 4 - this.canvas.width,
+                y: Math.random() * this.canvas.height * 4 - this.canvas.height,
                 size: Math.random() * 3 + 1,
                 brightness: Math.random(),
                 twinkleSpeed: Math.random() * 0.02 + 0.01,
                 twinkleOffset: Math.random() * Math.PI * 2
+            });
+        }
+    }
+    
+    initializeNearStars() {
+        // Closer, larger, more prominent stars
+        for (let i = 0; i < 50; i++) {
+            this.nearStars.push({
+                x: Math.random() * this.canvas.width * 3 - this.canvas.width * 0.5,
+                y: Math.random() * this.canvas.height * 3 - this.canvas.height * 0.5,
+                size: Math.random() * 4 + 2,
+                brightness: Math.random() * 0.4 + 0.6,
+                twinkleSpeed: Math.random() * 0.03 + 0.01,
+                twinkleOffset: Math.random() * Math.PI * 2,
+                color: ['#ffffff', '#e8f4fd', '#fff2e6', '#ffe6f2', '#e6f9ff'][Math.floor(Math.random() * 5)],
+                glowSize: Math.random() * 3 + 2
             });
         }
     }
@@ -145,6 +186,62 @@ class DynamicBackground {
                 },
                 pulseSpeed: Math.random() * 0.01 + 0.005,
                 pulseOffset: Math.random() * Math.PI * 2
+            });
+        }
+    }
+    
+    initializeGasGiants() {
+        // Large distant planetary bodies
+        for (let i = 0; i < 3; i++) {
+            this.gasGiants.push({
+                x: Math.random() * this.canvas.width * 2 - this.canvas.width * 0.5,
+                y: Math.random() * this.canvas.height * 2 - this.canvas.height * 0.5,
+                size: Math.random() * 120 + 80,
+                color: ['#1a237e', '#4a148c', '#b71c1c', '#e65100', '#1b5e20'][Math.floor(Math.random() * 5)],
+                drift: {
+                    x: (Math.random() - 0.5) * 0.1,
+                    y: (Math.random() - 0.5) * 0.1
+                },
+                pulseSpeed: Math.random() * 0.005 + 0.002,
+                pulseOffset: Math.random() * Math.PI * 2,
+                hasRings: Math.random() > 0.6
+            });
+        }
+    }
+    
+    initializeSpaceDebris() {
+        // Floating debris and asteroids
+        for (let i = 0; i < 15; i++) {
+            this.spaceDebris.push({
+                x: Math.random() * this.canvas.width * 3 - this.canvas.width,
+                y: Math.random() * this.canvas.height * 3 - this.canvas.height,
+                size: Math.random() * 8 + 3,
+                drift: {
+                    x: (Math.random() - 0.5) * 0.3,
+                    y: (Math.random() - 0.5) * 0.3
+                },
+                rotation: 0,
+                rotationSpeed: (Math.random() - 0.5) * 0.02,
+                color: '#444444',
+                shape: Math.floor(Math.random() * 3) // 0: circle, 1: square, 2: triangle
+            });
+        }
+    }
+    
+    initializeEnergyFields() {
+        // Pulsing energy fields
+        for (let i = 0; i < 5; i++) {
+            this.energyFields.push({
+                x: Math.random() * this.canvas.width * 2,
+                y: Math.random() * this.canvas.height * 2,
+                size: Math.random() * 200 + 100,
+                color: ['#4ecdc4', '#f39c12', '#e74c3c', '#9b59b6', '#2ecc71'][Math.floor(Math.random() * 5)],
+                pulseSpeed: Math.random() * 0.02 + 0.01,
+                pulseOffset: Math.random() * Math.PI * 2,
+                drift: {
+                    x: (Math.random() - 0.5) * 0.2,
+                    y: (Math.random() - 0.5) * 0.2
+                }
             });
         }
     }
@@ -209,6 +306,31 @@ class DynamicBackground {
             if (cloud.y < -cloud.size) cloud.y = this.canvas.height * 1.5;
         });
         
+        // Update gas giants
+        this.gasGiants.forEach(giant => {
+            giant.x += giant.drift.x * deltaTime * 0.001;
+            giant.y += giant.drift.y * deltaTime * 0.001;
+        });
+        
+        // Update space debris
+        this.spaceDebris.forEach(debris => {
+            debris.x += debris.drift.x * deltaTime * 0.01;
+            debris.y += debris.drift.y * deltaTime * 0.01;
+            debris.rotation += debris.rotationSpeed * deltaTime * 0.01;
+            
+            // Wrap around
+            if (debris.x > this.canvas.width * 3) debris.x = -debris.size;
+            if (debris.x < -debris.size) debris.x = this.canvas.width * 3;
+            if (debris.y > this.canvas.height * 3) debris.y = -debris.size;
+            if (debris.y < -debris.size) debris.y = this.canvas.height * 3;
+        });
+        
+        // Update energy fields
+        this.energyFields.forEach(field => {
+            field.x += field.drift.x * deltaTime * 0.01;
+            field.y += field.drift.y * deltaTime * 0.01;
+        });
+        
         // Update floating particles
         this.particles.forEach((particle, index) => {
             particle.x += particle.vx * deltaTime * 0.1;
@@ -237,7 +359,7 @@ class DynamicBackground {
         // Save context
         ctx.save();
         
-        // Base gradient background with intensity variation
+        // Enhanced gradient background with depth
         const baseIntensity = 0.1 + this.gameIntensity * 0.1;
         const warningRed = this.warningIntensity * 0.3;
         
@@ -246,85 +368,236 @@ class DynamicBackground {
             this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height)
         );
         
-        gradient.addColorStop(0, `rgba(${Math.floor(26 + warningRed * 100)}, ${Math.floor(26 + baseIntensity * 50)}, ${Math.floor(46 + baseIntensity * 30)}, 1)`);
-        gradient.addColorStop(0.5, `rgba(${Math.floor(22 + warningRed * 80)}, ${Math.floor(33 + baseIntensity * 40)}, ${Math.floor(62 + baseIntensity * 20)}, 1)`);
-        gradient.addColorStop(1, `rgba(${Math.floor(15 + warningRed * 60)}, ${Math.floor(15 + baseIntensity * 30)}, ${Math.floor(35 + baseIntensity * 15)}, 1)`);
+        gradient.addColorStop(0, `rgba(${Math.floor(8 + warningRed * 50)}, ${Math.floor(12 + baseIntensity * 25)}, ${Math.floor(28 + baseIntensity * 15)}, 1)`);
+        gradient.addColorStop(0.4, `rgba(${Math.floor(15 + warningRed * 60)}, ${Math.floor(20 + baseIntensity * 30)}, ${Math.floor(35 + baseIntensity * 20)}, 1)`);
+        gradient.addColorStop(0.8, `rgba(${Math.floor(5 + warningRed * 40)}, ${Math.floor(8 + baseIntensity * 20)}, ${Math.floor(15 + baseIntensity * 10)}, 1)`);
+        gradient.addColorStop(1, `rgba(${Math.floor(2 + warningRed * 30)}, ${Math.floor(4 + baseIntensity * 15)}, ${Math.floor(8 + baseIntensity * 8)}, 1)`);
         
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Render animated grid with camera parallax
-        ctx.globalAlpha = 0.1 + this.gameIntensity * 0.05;
-        ctx.strokeStyle = `rgba(78, 205, 196, ${0.3 + this.warningIntensity * 0.3})`;
-        ctx.lineWidth = 1;
-        
-        this.gridLines.forEach(line => {
+        // 1. Render distant stars (deepest layer)
+        ctx.globalAlpha = 0.6 + this.gameIntensity * 0.1;
+        this.distantStars.forEach(star => {
+            const x = star.x - cameraX * 0.01;
+            const y = star.y - cameraY * 0.01;
+            
+            if (x < -20 || x > this.canvas.width + 20 || y < -20 || y > this.canvas.height + 20) return;
+            
+            const twinkle = 0.5 + 0.5 * (Math.sin(this.time * star.twinkleSpeed + star.twinkleOffset) + 1) / 2;
+            const brightness = star.brightness * twinkle;
+            
+            ctx.globalAlpha = brightness * 0.4;
+            ctx.fillStyle = star.color;
             ctx.beginPath();
-            if (line.type === 'vertical') {
-                const x = (line.pos - cameraX * 0.1) % (this.canvas.width + 80);
-                const wave = Math.sin(this.time * 0.001 + line.offset) * line.wave;
-                ctx.moveTo(x + wave, 0);
-                ctx.lineTo(x - wave, this.canvas.height);
-            } else {
-                const y = (line.pos - cameraY * 0.1) % (this.canvas.height + 80);
-                const wave = Math.sin(this.time * 0.001 + line.offset) * line.wave;
-                ctx.moveTo(0, y + wave);
-                ctx.lineTo(this.canvas.width, y - wave);
-            }
-            ctx.stroke();
+            ctx.arc(x, y, star.size, 0, Math.PI * 2);
+            ctx.fill();
         });
         
-        // Render nebula clouds with parallax
-        ctx.globalAlpha = 0.4 + this.gameIntensity * 0.2;
-        this.nebula.forEach(cloud => {
-            const x = cloud.x - cameraX * 0.05;
-            const y = cloud.y - cameraY * 0.05;
-            const pulse = 1 + Math.sin(this.time * cloud.pulseSpeed + cloud.pulseOffset) * 0.2;
-            const size = cloud.size * pulse;
+        // 2. Render gas giants (far background)
+        ctx.globalAlpha = 0.3 + this.gameIntensity * 0.1;
+        this.gasGiants.forEach(giant => {
+            const x = giant.x - cameraX * 0.03;
+            const y = giant.y - cameraY * 0.03;
+            const pulse = 1 + Math.sin(this.time * giant.pulseSpeed + giant.pulseOffset) * 0.1;
+            const size = giant.size * pulse;
             
-            const nebulaGradient = ctx.createRadialGradient(x, y, 0, x, y, size);
-            nebulaGradient.addColorStop(0, cloud.color.replace(')', ', 0.3)').replace('hsl', 'hsla'));
-            nebulaGradient.addColorStop(0.7, cloud.color.replace(')', ', 0.1)').replace('hsl', 'hsla'));
-            nebulaGradient.addColorStop(1, 'transparent');
+            // Main planet body
+            const planetGradient = ctx.createRadialGradient(x - size * 0.3, y - size * 0.3, 0, x, y, size);
+            planetGradient.addColorStop(0, giant.color.replace(')', ', 0.8)').replace('rgb', 'rgba'));
+            planetGradient.addColorStop(0.7, giant.color.replace(')', ', 0.4)').replace('rgb', 'rgba'));
+            planetGradient.addColorStop(1, giant.color.replace(')', ', 0.1)').replace('rgb', 'rgba'));
             
-            ctx.fillStyle = nebulaGradient;
+            ctx.fillStyle = planetGradient;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Planetary rings
+            if (giant.hasRings) {
+                ctx.globalAlpha = 0.2;
+                ctx.strokeStyle = `rgba(200, 200, 200, 0.3)`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(x, y, size * 1.4, size * 0.3, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.ellipse(x, y, size * 1.6, size * 0.35, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        });
+        
+        // 3. Render energy fields (mid-background)
+        this.energyFields.forEach(field => {
+            const x = field.x - cameraX * 0.05;
+            const y = field.y - cameraY * 0.05;
+            const pulse = 0.6 + 0.4 * (Math.sin(this.time * field.pulseSpeed + field.pulseOffset) + 1) / 2;
+            const size = field.size * pulse;
+            
+            const fieldGradient = ctx.createRadialGradient(x, y, 0, x, y, size);
+            fieldGradient.addColorStop(0, field.color.replace(')', ', 0.1)').replace('rgb', 'rgba'));
+            fieldGradient.addColorStop(0.5, field.color.replace(')', ', 0.05)').replace('rgb', 'rgba'));
+            fieldGradient.addColorStop(1, 'transparent');
+            
+            ctx.globalAlpha = 0.3 + pulse * 0.2;
+            ctx.fillStyle = fieldGradient;
             ctx.beginPath();
             ctx.arc(x, y, size, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Render twinkling stars with parallax
+        // 4. Render nebula clouds with enhanced visuals
+        ctx.globalAlpha = 0.4 + this.gameIntensity * 0.2;
+        this.nebula.forEach(cloud => {
+            const x = cloud.x - cameraX * 0.08;
+            const y = cloud.y - cameraY * 0.08;
+            const pulse = 1 + Math.sin(this.time * cloud.pulseSpeed + cloud.pulseOffset) * 0.3;
+            const size = cloud.size * pulse;
+            
+            // Multiple nebula layers for depth
+            for (let layer = 0; layer < 3; layer++) {
+                const layerSize = size * (0.4 + layer * 0.3);
+                const layerAlpha = 0.3 - layer * 0.1;
+                
+                const nebulaGradient = ctx.createRadialGradient(x, y, 0, x, y, layerSize);
+                nebulaGradient.addColorStop(0, cloud.color.replace(')', `, ${layerAlpha})`).replace('hsl', 'hsla'));
+                nebulaGradient.addColorStop(0.6, cloud.color.replace(')', `, ${layerAlpha * 0.5})`).replace('hsl', 'hsla'));
+                nebulaGradient.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = nebulaGradient;
+                ctx.beginPath();
+                ctx.arc(x + layer * 10, y + layer * 5, layerSize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+        
+        // 5. Render space debris
+        ctx.globalAlpha = 0.6;
+        this.spaceDebris.forEach(debris => {
+            const x = debris.x - cameraX * 0.15;
+            const y = debris.y - cameraY * 0.15;
+            
+            if (x < -20 || x > this.canvas.width + 20 || y < -20 || y > this.canvas.height + 20) return;
+            
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(debris.rotation);
+            ctx.fillStyle = debris.color;
+            
+            switch(debris.shape) {
+                case 0: // circle
+                    ctx.beginPath();
+                    ctx.arc(0, 0, debris.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 1: // square
+                    ctx.fillRect(-debris.size/2, -debris.size/2, debris.size, debris.size);
+                    break;
+                case 2: // triangle
+                    ctx.beginPath();
+                    ctx.moveTo(0, -debris.size);
+                    ctx.lineTo(debris.size, debris.size);
+                    ctx.lineTo(-debris.size, debris.size);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+            }
+            ctx.restore();
+        });
+        
+        // 6. Render main stars with enhanced effects
         ctx.globalAlpha = 1;
         this.stars.forEach(star => {
-            const x = (star.x - cameraX * 0.02) % (this.canvas.width * 2);
-            const y = (star.y - cameraY * 0.02) % (this.canvas.height * 2);
+            const x = star.x - cameraX * 0.05;
+            const y = star.y - cameraY * 0.05;
+            
+            if (x < -50 || x > this.canvas.width + 50 || y < -50 || y > this.canvas.height + 50) return;
+            
             const twinkle = 0.3 + 0.7 * (Math.sin(this.time * star.twinkleSpeed + star.twinkleOffset) + 1) / 2;
             const brightness = star.brightness * twinkle * (0.8 + this.gameIntensity * 0.2);
             
+            ctx.globalAlpha = brightness;
             ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
             ctx.beginPath();
             ctx.arc(x, y, star.size, 0, Math.PI * 2);
             ctx.fill();
             
-            // Add star glow for larger stars
+            // Enhanced star glow
             if (star.size > 2) {
-                ctx.globalAlpha = brightness * 0.5;
-                ctx.fillStyle = `rgba(78, 205, 196, ${brightness * 0.3})`;
+                ctx.globalAlpha = brightness * 0.4;
+                ctx.fillStyle = `rgba(78, 205, 196, ${brightness * 0.2})`;
                 ctx.beginPath();
-                ctx.arc(x, y, star.size * 2, 0, Math.PI * 2);
+                ctx.arc(x, y, star.size * 3, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.globalAlpha = 1;
             }
         });
         
-        // Render floating particles
-        ctx.globalAlpha = 0.6;
+        // 7. Render near stars (closest layer)
+        this.nearStars.forEach(star => {
+            const x = star.x - cameraX * 0.1;
+            const y = star.y - cameraY * 0.1;
+            
+            if (x < -100 || x > this.canvas.width + 100 || y < -100 || y > this.canvas.height + 100) return;
+            
+            const twinkle = 0.4 + 0.6 * (Math.sin(this.time * star.twinkleSpeed + star.twinkleOffset) + 1) / 2;
+            const brightness = star.brightness * twinkle;
+            
+            // Main star
+            ctx.globalAlpha = brightness;
+            ctx.fillStyle = star.color;
+            ctx.beginPath();
+            ctx.arc(x, y, star.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Star glow effect
+            ctx.globalAlpha = brightness * 0.3;
+            const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, star.glowSize * 3);
+            glowGradient.addColorStop(0, star.color.replace(')', ', 0.6)').replace('rgb', 'rgba'));
+            glowGradient.addColorStop(0.5, star.color.replace(')', ', 0.2)').replace('rgb', 'rgba'));
+            glowGradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = glowGradient;
+            ctx.beginPath();
+            ctx.arc(x, y, star.glowSize * 3, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // 8. Render animated grid (foreground)
+        ctx.globalAlpha = 0.08 + this.gameIntensity * 0.03;
+        ctx.strokeStyle = `rgba(78, 205, 196, ${0.2 + this.warningIntensity * 0.3})`;
+        ctx.lineWidth = 1;
+        
+        const gridSpacing = 80;
+        const startX = Math.floor((cameraX * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
+        const endX = startX + this.canvas.width + gridSpacing * 2;
+        const startY = Math.floor((cameraY * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
+        const endY = startY + this.canvas.height + gridSpacing * 2;
+        
+        for (let x = startX; x <= endX; x += gridSpacing) {
+            ctx.beginPath();
+            const screenX = x - cameraX * 0.3;
+            const wave = Math.sin(this.time * 0.001 + x * 0.01) * 3;
+            ctx.moveTo(screenX + wave, 0);
+            ctx.lineTo(screenX - wave, this.canvas.height);
+            ctx.stroke();
+        }
+        
+        for (let y = startY; y <= endY; y += gridSpacing) {
+            ctx.beginPath();
+            const screenY = y - cameraY * 0.3;
+            const wave = Math.sin(this.time * 0.001 + y * 0.01) * 3;
+            ctx.moveTo(0, screenY + wave);
+            ctx.lineTo(this.canvas.width, screenY - wave);
+            ctx.stroke();
+        }
+        
+        // 9. Render floating particles (front layer)
+        ctx.globalAlpha = 0.8;
         this.particles.forEach(particle => {
-            const x = particle.x - cameraX * 0.01;
-            const y = particle.y - cameraY * 0.01;
+            const x = particle.x - cameraX * 0.02;
+            const y = particle.y - cameraY * 0.02;
             const alpha = 1 - (particle.life / particle.maxLife);
             
-            ctx.globalAlpha = alpha * 0.4;
+            ctx.globalAlpha = alpha * 0.6;
             ctx.fillStyle = particle.color;
             ctx.beginPath();
             ctx.arc(x, y, particle.size, 0, Math.PI * 2);
@@ -339,10 +612,26 @@ class DynamicBackground {
         this.canvas.width = width;
         this.canvas.height = height;
         
-        // Reinitialize with new dimensions
+        // Reinitialize all layers with new dimensions
+        this.distantStars = [];
+        this.stars = [];
+        this.nearStars = [];
+        this.nebula = [];
+        this.gasGiants = [];
+        this.spaceDebris = [];
+        this.energyFields = [];
+        this.gridLines = [];
+        this.particles = [];
+        
+        this.initializeDistantStars();
         this.initializeStars();
+        this.initializeNearStars();
         this.initializeNebula();
+        this.initializeGasGiants();
+        this.initializeSpaceDebris();
+        this.initializeEnergyFields();
         this.initializeGrid();
+        this.initializeParticles();
     }
 }
 
