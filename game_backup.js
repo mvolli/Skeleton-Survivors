@@ -102,7 +102,7 @@ class GothicBackground {
         this.canvas = canvas;
         this.time = 0;
         
-        // Gothic forest background layers using downloaded images
+        // Multiple background layers for depth
         this.distantStars = [];
         this.stars = [];
         this.nearStars = [];
