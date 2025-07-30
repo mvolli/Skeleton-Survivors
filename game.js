@@ -109,7 +109,6 @@ class DynamicBackground {
         this.nebula = [];
         this.gasGiants = [];
         this.spaceDebris = [];
-        this.energyFields = [];
         this.gridLines = [];
         this.particles = [];
         
@@ -124,7 +123,6 @@ class DynamicBackground {
         this.initializeNebula();
         this.initializeGasGiants();
         this.initializeSpaceDebris();
-        this.initializeEnergyFields();
         this.initializeGrid();
         this.initializeParticles();
     }
@@ -191,20 +189,20 @@ class DynamicBackground {
     }
     
     initializeGasGiants() {
-        // Large distant planetary bodies
-        for (let i = 0; i < 3; i++) {
+        // Smaller, subtle distant planetary bodies
+        for (let i = 0; i < 2; i++) {
             this.gasGiants.push({
                 x: Math.random() * this.canvas.width * 2 - this.canvas.width * 0.5,
                 y: Math.random() * this.canvas.height * 2 - this.canvas.height * 0.5,
-                size: Math.random() * 120 + 80,
-                color: ['#1a237e', '#4a148c', '#b71c1c', '#e65100', '#1b5e20'][Math.floor(Math.random() * 5)],
+                size: Math.random() * 60 + 40, // Much smaller
+                color: ['#1a237e', '#4a148c', '#b71c1c', '#1b5e20'][Math.floor(Math.random() * 4)],
                 drift: {
-                    x: (Math.random() - 0.5) * 0.1,
-                    y: (Math.random() - 0.5) * 0.1
+                    x: (Math.random() - 0.5) * 0.05, // Slower drift
+                    y: (Math.random() - 0.5) * 0.05
                 },
-                pulseSpeed: Math.random() * 0.005 + 0.002,
+                pulseSpeed: Math.random() * 0.002 + 0.001, // Much slower pulse
                 pulseOffset: Math.random() * Math.PI * 2,
-                hasRings: Math.random() > 0.6
+                hasRings: Math.random() > 0.8 // Fewer rings
             });
         }
     }
@@ -231,7 +229,6 @@ class DynamicBackground {
     initializeEnergyFields() {
         // Pulsing energy fields
         for (let i = 0; i < 5; i++) {
-            this.energyFields.push({
                 x: Math.random() * this.canvas.width * 2,
                 y: Math.random() * this.canvas.height * 2,
                 size: Math.random() * 200 + 100,
@@ -326,7 +323,6 @@ class DynamicBackground {
         });
         
         // Update energy fields
-        this.energyFields.forEach(field => {
             field.x += field.drift.x * deltaTime * 0.01;
             field.y += field.drift.y * deltaTime * 0.01;
         });
@@ -352,9 +348,9 @@ class DynamicBackground {
         });
     }
     
-    render(ctx, player = {x: 0, y: 0}) {
-        const playerX = player.x || 0;
-        const playerY = player.y || 0;
+    render(ctx, scroll = {x: 0, y: 0}) {
+        const scrollX = scroll.x || 0;
+        const scrollY = scroll.y || 0;
         
         // Save context
         ctx.save();
@@ -379,8 +375,8 @@ class DynamicBackground {
         // 1. Render distant stars (deepest layer)
         ctx.globalAlpha = 0.6 + this.gameIntensity * 0.1;
         this.distantStars.forEach(star => {
-            const x = star.x - playerX * 0.01;
-            const y = star.y - playerY * 0.01;
+            const x = star.x - scrollX * 0.01;
+            const y = star.y - scrollY * 0.01;
             
             if (x < -20 || x > this.canvas.width + 20 || y < -20 || y > this.canvas.height + 20) return;
             
@@ -394,19 +390,19 @@ class DynamicBackground {
             ctx.fill();
         });
         
-        // 2. Render gas giants (far background)
-        ctx.globalAlpha = 0.3 + this.gameIntensity * 0.1;
+        // 2. Render gas giants (far background) - subtle and static
+        ctx.globalAlpha = 0.15 + this.gameIntensity * 0.05;
         this.gasGiants.forEach(giant => {
-            const x = giant.x - playerX * 0.03;
-            const y = giant.y - playerY * 0.03;
-            const pulse = 1 + Math.sin(this.time * giant.pulseSpeed + giant.pulseOffset) * 0.1;
+            const x = giant.x - scrollX * 0.03;
+            const y = giant.y - scrollY * 0.03;
+            const pulse = 1 + Math.sin(this.time * giant.pulseSpeed + giant.pulseOffset) * 0.03; // Much smaller pulse
             const size = giant.size * pulse;
             
             // Main planet body
             const planetGradient = ctx.createRadialGradient(x - size * 0.3, y - size * 0.3, 0, x, y, size);
-            planetGradient.addColorStop(0, giant.color.replace(')', ', 0.8)').replace('rgb', 'rgba'));
-            planetGradient.addColorStop(0.7, giant.color.replace(')', ', 0.4)').replace('rgb', 'rgba'));
-            planetGradient.addColorStop(1, giant.color.replace(')', ', 0.1)').replace('rgb', 'rgba'));
+            planetGradient.addColorStop(0, giant.color.replace(')', ', 0.4)').replace('rgb', 'rgba'));
+            planetGradient.addColorStop(0.7, giant.color.replace(')', ', 0.2)').replace('rgb', 'rgba'));
+            planetGradient.addColorStop(1, giant.color.replace(')', ', 0.05)').replace('rgb', 'rgba'));
             
             ctx.fillStyle = planetGradient;
             ctx.beginPath();
@@ -428,9 +424,8 @@ class DynamicBackground {
         });
         
         // 3. Render energy fields (mid-background)
-        this.energyFields.forEach(field => {
-            const x = field.x - playerX * 0.05;
-            const y = field.y - playerY * 0.05;
+            const x = field.x - scrollX * 0.05;
+            const y = field.y - scrollY * 0.05;
             const pulse = 0.6 + 0.4 * (Math.sin(this.time * field.pulseSpeed + field.pulseOffset) + 1) / 2;
             const size = field.size * pulse;
             
@@ -449,8 +444,8 @@ class DynamicBackground {
         // 4. Render nebula clouds with enhanced visuals
         ctx.globalAlpha = 0.4 + this.gameIntensity * 0.2;
         this.nebula.forEach(cloud => {
-            const x = cloud.x - playerX * 0.08;
-            const y = cloud.y - playerY * 0.08;
+            const x = cloud.x - scrollX * 0.08;
+            const y = cloud.y - scrollY * 0.08;
             const pulse = 1 + Math.sin(this.time * cloud.pulseSpeed + cloud.pulseOffset) * 0.3;
             const size = cloud.size * pulse;
             
@@ -474,8 +469,8 @@ class DynamicBackground {
         // 5. Render space debris
         ctx.globalAlpha = 0.6;
         this.spaceDebris.forEach(debris => {
-            const x = debris.x - playerX * 0.15;
-            const y = debris.y - playerY * 0.15;
+            const x = debris.x - scrollX * 0.15;
+            const y = debris.y - scrollY * 0.15;
             
             if (x < -20 || x > this.canvas.width + 20 || y < -20 || y > this.canvas.height + 20) return;
             
@@ -508,8 +503,8 @@ class DynamicBackground {
         // 6. Render main stars with enhanced effects
         ctx.globalAlpha = 1;
         this.stars.forEach(star => {
-            const x = star.x - playerX * 0.05;
-            const y = star.y - playerY * 0.05;
+            const x = star.x - scrollX * 0.05;
+            const y = star.y - scrollY * 0.05;
             
             if (x < -50 || x > this.canvas.width + 50 || y < -50 || y > this.canvas.height + 50) return;
             
@@ -534,8 +529,8 @@ class DynamicBackground {
         
         // 7. Render near stars (closest layer)
         this.nearStars.forEach(star => {
-            const x = star.x - playerX * 0.1;
-            const y = star.y - playerY * 0.1;
+            const x = star.x - scrollX * 0.1;
+            const y = star.y - scrollY * 0.1;
             
             if (x < -100 || x > this.canvas.width + 100 || y < -100 || y > this.canvas.height + 100) return;
             
@@ -567,14 +562,14 @@ class DynamicBackground {
         ctx.lineWidth = 1;
         
         const gridSpacing = 80;
-        const startX = Math.floor((playerX * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
+        const startX = Math.floor((scrollX * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
         const endX = startX + this.canvas.width + gridSpacing * 2;
-        const startY = Math.floor((playerY * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
+        const startY = Math.floor((scrollY * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
         const endY = startY + this.canvas.height + gridSpacing * 2;
         
         for (let x = startX; x <= endX; x += gridSpacing) {
             ctx.beginPath();
-            const screenX = x - playerX * 0.3;
+            const screenX = x - scrollX * 0.3;
             const wave = Math.sin(this.time * 0.001 + x * 0.01) * 3;
             ctx.moveTo(screenX + wave, 0);
             ctx.lineTo(screenX - wave, this.canvas.height);
@@ -583,7 +578,7 @@ class DynamicBackground {
         
         for (let y = startY; y <= endY; y += gridSpacing) {
             ctx.beginPath();
-            const screenY = y - playerY * 0.3;
+            const screenY = y - scrollY * 0.3;
             const wave = Math.sin(this.time * 0.001 + y * 0.01) * 3;
             ctx.moveTo(0, screenY + wave);
             ctx.lineTo(this.canvas.width, screenY - wave);
@@ -593,8 +588,8 @@ class DynamicBackground {
         // 9. Render floating particles (front layer)
         ctx.globalAlpha = 0.8;
         this.particles.forEach(particle => {
-            const x = particle.x - playerX * 0.02;
-            const y = particle.y - playerY * 0.02;
+            const x = particle.x - scrollX * 0.02;
+            const y = particle.y - scrollY * 0.02;
             const alpha = 1 - (particle.life / particle.maxLife);
             
             ctx.globalAlpha = alpha * 0.6;
@@ -619,7 +614,6 @@ class DynamicBackground {
         this.nebula = [];
         this.gasGiants = [];
         this.spaceDebris = [];
-        this.energyFields = [];
         this.gridLines = [];
         this.particles = [];
         
@@ -629,7 +623,6 @@ class DynamicBackground {
         this.initializeNebula();
         this.initializeGasGiants();
         this.initializeSpaceDebris();
-        this.initializeEnergyFields();
         this.initializeGrid();
         this.initializeParticles();
     }
@@ -878,6 +871,7 @@ class Game {
         this.isPaused = false;
         
         this.camera = { x: 0, y: 0 };
+        this.scrollOffset = { x: 0, y: 0 }; // For background scrolling
         this.lastTime = 0;
         
         this.keys = {};
@@ -1034,13 +1028,13 @@ class Game {
     update(deltaTime) {
         this.gameTime += deltaTime;
         
-        // Update dynamic background based on player position
+        // Update dynamic background based on scroll offset
         this.background.update(deltaTime, {
             level: this.level,
             gameTime: this.gameTime,
             bossWarning: this.bossWarning,
-            playerX: this.player.x,
-            playerY: this.player.y
+            scrollX: this.scrollOffset.x,
+            scrollY: this.scrollOffset.y
         });
         
         // Update enhanced particle system
@@ -1050,7 +1044,7 @@ class Game {
         this.screenShake.update(deltaTime);
         
         // Update player
-        this.player.update(deltaTime, this.keys);
+        this.player.update(deltaTime, this.keys, this);
         
         // Check if zombies should be unlocked (after 10 minutes)
         if (!this.zombiesUnlocked && this.gameTime >= this.zombieUnlockTime) {
@@ -1279,8 +1273,8 @@ class Game {
         this.ctx.save();
         this.screenShake.apply(this.ctx);
         
-        // Render dynamic background based on player position (no camera needed)
-        this.background.render(this.ctx, {x: this.player.x, y: this.player.y});
+        // Render dynamic background based on scroll offset
+        this.background.render(this.ctx, {x: this.scrollOffset.x, y: this.scrollOffset.y});
         
         // Draw game objects
         this.particles.forEach(particle => particle.render(this.ctx));
@@ -1781,7 +1775,7 @@ class Player {
         this.ghostAnimation = assets.getAnimation('ghostIdle');
     }
     
-    update(deltaTime, keys) {
+    update(deltaTime, keys, game) {
         const dt = deltaTime / 1000;
         
         // Movement
@@ -1799,8 +1793,51 @@ class Player {
             dy *= 0.707;
         }
         
-        this.x += dx * this.speed * this.moveSpeed * dt;
-        this.y += dy * this.speed * this.moveSpeed * dt;
+        const moveX = dx * this.speed * this.moveSpeed * dt;
+        const moveY = dy * this.speed * this.moveSpeed * dt;
+        
+        // Screen boundary handling with scroll zone
+        const scrollZone = 100; // Pixels from edge to start scrolling
+        const canvasWidth = game ? game.canvas.width : 800;
+        const canvasHeight = game ? game.canvas.height : 600;
+        
+        // Calculate new position
+        let newX = this.x + moveX;
+        let newY = this.y + moveY;
+        
+        // Handle horizontal movement and scrolling
+        if (newX < scrollZone) {
+            // Near left edge - keep player at scrollZone and scroll background
+            newX = scrollZone;
+            if (game && moveX < 0) {
+                game.scrollOffset.x += moveX * 2; // Scroll background
+            }
+        } else if (newX > canvasWidth - scrollZone) {
+            // Near right edge - keep player at boundary and scroll background
+            newX = canvasWidth - scrollZone;
+            if (game && moveX > 0) {
+                game.scrollOffset.x += moveX * 2; // Scroll background
+            }
+        }
+        
+        // Handle vertical movement and scrolling
+        if (newY < scrollZone) {
+            // Near top edge - keep player at scrollZone and scroll background
+            newY = scrollZone;
+            if (game && moveY < 0) {
+                game.scrollOffset.y += moveY * 2; // Scroll background
+            }
+        } else if (newY > canvasHeight - scrollZone) {
+            // Near bottom edge - keep player at boundary and scroll background
+            newY = canvasHeight - scrollZone;
+            if (game && moveY > 0) {
+                game.scrollOffset.y += moveY * 2; // Scroll background
+            }
+        }
+        
+        // Apply the constrained position
+        this.x = newX;
+        this.y = newY;
         
         // Update ghost animation
         if (this.ghostAnimation) {
