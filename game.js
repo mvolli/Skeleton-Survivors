@@ -96,35 +96,55 @@ class AssetManager {
     }
 }
 
-// Enhanced Dynamic Background System
-class DynamicBackground {
+// Gothic Medieval Background System - Much better for skeletons and zombies!
+class GothicBackground {
     constructor(canvas) {
         this.canvas = canvas;
         this.time = 0;
         
-        // Multiple background layers for depth
-        this.distantStars = [];
-        this.stars = [];
-        this.nearStars = [];
-        this.nebula = [];
-        this.gasGiants = [];
-        this.spaceDebris = [];
-        this.gridLines = [];
+        // Gothic background layers using downloaded images
+        this.forestLayers = {
+            backTrees: new Image(),
+            middleTrees: new Image(),
+            frontTrees: new Image(),
+            lights: new Image()
+        };
         this.particles = [];
         
+        // Load the forest background images
+        this.loadBackgroundImages();
+        
         // Animation properties
-        this.pulseIntensity = 0;
         this.gameIntensity = 0; // Increases with game progression
         this.warningIntensity = 0; // For boss warnings
+        this.imagesLoaded = 0;
+        this.totalImages = 4;
         
-        this.initializeDistantStars();
-        this.initializeStars();
-        this.initializeNearStars();
-        this.initializeNebula();
-        this.initializeGasGiants();
-        this.initializeSpaceDebris();
-        this.initializeGrid();
+        // Load the forest background images
+        this.loadBackgroundImages();
         this.initializeParticles();
+    }
+    
+    loadBackgroundImages() {
+        // Load parallax forest layers
+        this.forestLayers.backTrees.onload = () => this.onImageLoad();
+        this.forestLayers.backTrees.src = 'gfx/backgrounds/parallax_forest_pack/layers/parallax-forest-back-trees.png';
+        
+        this.forestLayers.middleTrees.onload = () => this.onImageLoad();
+        this.forestLayers.middleTrees.src = 'gfx/backgrounds/parallax_forest_pack/layers/parallax-forest-middle-trees.png';
+        
+        this.forestLayers.frontTrees.onload = () => this.onImageLoad();
+        this.forestLayers.frontTrees.src = 'gfx/backgrounds/parallax_forest_pack/layers/parallax-forest-front-trees.png';
+        
+        this.forestLayers.lights.onload = () => this.onImageLoad();
+        this.forestLayers.lights.src = 'gfx/backgrounds/parallax_forest_pack/layers/parallax-forest-lights.png';
+    }
+    
+    onImageLoad() {
+        this.imagesLoaded++;
+        if (this.imagesLoaded === this.totalImages) {
+            console.log('All background images loaded successfully!');
+        }
     }
     
     initializeDistantStars() {
@@ -812,7 +832,7 @@ class Game {
         
         this.saveManager = saveManager;
         this.assets = new AssetManager();
-        this.background = new DynamicBackground(this.canvas);
+        this.background = new GothicBackground(this.canvas);
         this.particleSystem = new ParticleSystem();
         this.screenShake = new ScreenShake();
         this.player = new Player(0, 0, this.assets, saveManager);
