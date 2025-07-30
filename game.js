@@ -1252,6 +1252,9 @@ class Game {
         this.ctx.save();
         this.ctx.translate(-this.camera.x, -this.camera.y);
         
+        // Draw world-aligned grid
+        this.drawBackground();
+        
         // Draw game objects
         this.particles.forEach(particle => particle.render(this.ctx));
         this.particleSystem.render(this.ctx);
@@ -1335,7 +1338,7 @@ class Game {
         const startX = Math.floor(this.camera.x / gridSize) * gridSize;
         const startY = Math.floor(this.camera.y / gridSize) * gridSize;
         
-        this.ctx.strokeStyle = '#1a1a2e';
+        this.ctx.strokeStyle = 'rgba(26, 26, 46, 0.4)';
         this.ctx.lineWidth = 1;
         
         for (let x = startX; x < this.camera.x + this.canvas.width + gridSize; x += gridSize) {
