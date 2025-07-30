@@ -352,9 +352,9 @@ class DynamicBackground {
         });
     }
     
-    render(ctx, camera = {x: 0, y: 0}) {
-        const cameraX = camera.x || 0;
-        const cameraY = camera.y || 0;
+    render(ctx, player = {x: 0, y: 0}) {
+        const playerX = player.x || 0;
+        const playerY = player.y || 0;
         
         // Save context
         ctx.save();
@@ -379,8 +379,8 @@ class DynamicBackground {
         // 1. Render distant stars (deepest layer)
         ctx.globalAlpha = 0.6 + this.gameIntensity * 0.1;
         this.distantStars.forEach(star => {
-            const x = star.x - cameraX * 0.01;
-            const y = star.y - cameraY * 0.01;
+            const x = star.x - playerX * 0.01;
+            const y = star.y - playerY * 0.01;
             
             if (x < -20 || x > this.canvas.width + 20 || y < -20 || y > this.canvas.height + 20) return;
             
@@ -397,8 +397,8 @@ class DynamicBackground {
         // 2. Render gas giants (far background)
         ctx.globalAlpha = 0.3 + this.gameIntensity * 0.1;
         this.gasGiants.forEach(giant => {
-            const x = giant.x - cameraX * 0.03;
-            const y = giant.y - cameraY * 0.03;
+            const x = giant.x - playerX * 0.03;
+            const y = giant.y - playerY * 0.03;
             const pulse = 1 + Math.sin(this.time * giant.pulseSpeed + giant.pulseOffset) * 0.1;
             const size = giant.size * pulse;
             
@@ -429,8 +429,8 @@ class DynamicBackground {
         
         // 3. Render energy fields (mid-background)
         this.energyFields.forEach(field => {
-            const x = field.x - cameraX * 0.05;
-            const y = field.y - cameraY * 0.05;
+            const x = field.x - playerX * 0.05;
+            const y = field.y - playerY * 0.05;
             const pulse = 0.6 + 0.4 * (Math.sin(this.time * field.pulseSpeed + field.pulseOffset) + 1) / 2;
             const size = field.size * pulse;
             
@@ -449,8 +449,8 @@ class DynamicBackground {
         // 4. Render nebula clouds with enhanced visuals
         ctx.globalAlpha = 0.4 + this.gameIntensity * 0.2;
         this.nebula.forEach(cloud => {
-            const x = cloud.x - cameraX * 0.08;
-            const y = cloud.y - cameraY * 0.08;
+            const x = cloud.x - playerX * 0.08;
+            const y = cloud.y - playerY * 0.08;
             const pulse = 1 + Math.sin(this.time * cloud.pulseSpeed + cloud.pulseOffset) * 0.3;
             const size = cloud.size * pulse;
             
@@ -474,8 +474,8 @@ class DynamicBackground {
         // 5. Render space debris
         ctx.globalAlpha = 0.6;
         this.spaceDebris.forEach(debris => {
-            const x = debris.x - cameraX * 0.15;
-            const y = debris.y - cameraY * 0.15;
+            const x = debris.x - playerX * 0.15;
+            const y = debris.y - playerY * 0.15;
             
             if (x < -20 || x > this.canvas.width + 20 || y < -20 || y > this.canvas.height + 20) return;
             
@@ -508,8 +508,8 @@ class DynamicBackground {
         // 6. Render main stars with enhanced effects
         ctx.globalAlpha = 1;
         this.stars.forEach(star => {
-            const x = star.x - cameraX * 0.05;
-            const y = star.y - cameraY * 0.05;
+            const x = star.x - playerX * 0.05;
+            const y = star.y - playerY * 0.05;
             
             if (x < -50 || x > this.canvas.width + 50 || y < -50 || y > this.canvas.height + 50) return;
             
@@ -534,8 +534,8 @@ class DynamicBackground {
         
         // 7. Render near stars (closest layer)
         this.nearStars.forEach(star => {
-            const x = star.x - cameraX * 0.1;
-            const y = star.y - cameraY * 0.1;
+            const x = star.x - playerX * 0.1;
+            const y = star.y - playerY * 0.1;
             
             if (x < -100 || x > this.canvas.width + 100 || y < -100 || y > this.canvas.height + 100) return;
             
@@ -567,14 +567,14 @@ class DynamicBackground {
         ctx.lineWidth = 1;
         
         const gridSpacing = 80;
-        const startX = Math.floor((cameraX * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
+        const startX = Math.floor((playerX * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
         const endX = startX + this.canvas.width + gridSpacing * 2;
-        const startY = Math.floor((cameraY * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
+        const startY = Math.floor((playerY * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
         const endY = startY + this.canvas.height + gridSpacing * 2;
         
         for (let x = startX; x <= endX; x += gridSpacing) {
             ctx.beginPath();
-            const screenX = x - cameraX * 0.3;
+            const screenX = x - playerX * 0.3;
             const wave = Math.sin(this.time * 0.001 + x * 0.01) * 3;
             ctx.moveTo(screenX + wave, 0);
             ctx.lineTo(screenX - wave, this.canvas.height);
@@ -583,7 +583,7 @@ class DynamicBackground {
         
         for (let y = startY; y <= endY; y += gridSpacing) {
             ctx.beginPath();
-            const screenY = y - cameraY * 0.3;
+            const screenY = y - playerY * 0.3;
             const wave = Math.sin(this.time * 0.001 + y * 0.01) * 3;
             ctx.moveTo(0, screenY + wave);
             ctx.lineTo(this.canvas.width, screenY - wave);
@@ -593,8 +593,8 @@ class DynamicBackground {
         // 9. Render floating particles (front layer)
         ctx.globalAlpha = 0.8;
         this.particles.forEach(particle => {
-            const x = particle.x - cameraX * 0.02;
-            const y = particle.y - cameraY * 0.02;
+            const x = particle.x - playerX * 0.02;
+            const y = particle.y - playerY * 0.02;
             const alpha = 1 - (particle.life / particle.maxLife);
             
             ctx.globalAlpha = alpha * 0.6;
@@ -1034,15 +1034,13 @@ class Game {
     update(deltaTime) {
         this.gameTime += deltaTime;
         
-        // Update camera to follow player
-        this.camera.x = this.player.x - this.canvas.width / 2;
-        this.camera.y = this.player.y - this.canvas.height / 2;
-        
-        // Update dynamic background
+        // Update dynamic background based on player position
         this.background.update(deltaTime, {
             level: this.level,
             gameTime: this.gameTime,
-            bossWarning: this.bossWarning
+            bossWarning: this.bossWarning,
+            playerX: this.player.x,
+            playerY: this.player.y
         });
         
         // Update enhanced particle system
@@ -1281,12 +1279,8 @@ class Game {
         this.ctx.save();
         this.screenShake.apply(this.ctx);
         
-        // Render dynamic background (replaces static background)
-        this.background.render(this.ctx, this.camera);
-        
-        // Save context for camera transform
-        this.ctx.save();
-        this.ctx.translate(-this.camera.x, -this.camera.y);
+        // Render dynamic background based on player position (no camera needed)
+        this.background.render(this.ctx, {x: this.player.x, y: this.player.y});
         
         // Draw game objects
         this.particles.forEach(particle => particle.render(this.ctx));
@@ -1310,10 +1304,7 @@ class Game {
         
         this.player.render(this.ctx);
         
-        // Restore context
-        this.ctx.restore();
-        
-        // Draw UI elements (not affected by camera)
+        // Draw UI elements
         this.renderBossWarning();
         this.renderBossIndicator();
         
