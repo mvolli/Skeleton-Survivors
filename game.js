@@ -815,7 +815,7 @@ class Game {
         this.background = new DynamicBackground(this.canvas);
         this.particleSystem = new ParticleSystem();
         this.screenShake = new ScreenShake();
-        this.player = new Player(this.canvas.width / 2, this.canvas.height / 2, this.assets, saveManager);
+        this.player = new Player(0, 0, this.assets, saveManager);
         this.enemies = [];
         this.projectiles = [];
         this.particles = [];
@@ -1004,7 +1004,15 @@ class Game {
         this.screenShake.update(deltaTime);
         
         // Update player
-        this.player.update(deltaTime, this.keys, this);
+        this.player.update(deltaTime, this.keys);
+        
+        // Update camera to follow player (center player on screen)
+        this.camera.x = this.player.x - this.canvas.width / 2;
+        this.camera.y = this.player.y - this.canvas.height / 2;
+        
+        // Update scroll offset for background parallax
+        this.scrollOffset.x = this.camera.x;
+        this.scrollOffset.y = this.camera.y;
         
         // Check if zombies should be unlocked (after 10 minutes)
         if (!this.zombiesUnlocked && this.gameTime >= this.zombieUnlockTime) {
@@ -1233,6 +1241,10 @@ class Game {
         this.ctx.save();
         this.screenShake.apply(this.ctx);
         
+        // Apply camera transform for world objects
+        this.ctx.save();
+        this.ctx.translate(-this.camera.x, -this.camera.y);
+        
         // Render dynamic background based on scroll offset
         this.background.render(this.ctx, {x: this.scrollOffset.x, y: this.scrollOffset.y});
         
@@ -1257,6 +1269,9 @@ class Game {
         });
         
         this.player.render(this.ctx);
+        
+        // Restore camera transform
+        this.ctx.restore();
         
         // Draw UI elements
         this.renderBossWarning();
@@ -1735,7 +1750,7 @@ class Player {
         this.ghostAnimation = assets.getAnimation('ghostIdle');
     }
     
-    update(deltaTime, keys, game) {
+    update(deltaTime, keys) {
         const dt = deltaTime / 1000;
         
         // Movement
@@ -1753,51 +1768,9 @@ class Player {
             dy *= 0.707;
         }
         
-        const moveX = dx * this.speed * this.moveSpeed * dt;
-        const moveY = dy * this.speed * this.moveSpeed * dt;
-        
-        // Screen boundary handling with scroll zone
-        const scrollZone = 100; // Pixels from edge to start scrolling
-        const canvasWidth = game ? game.canvas.width : 800;
-        const canvasHeight = game ? game.canvas.height : 600;
-        
-        // Calculate new position
-        let newX = this.x + moveX;
-        let newY = this.y + moveY;
-        
-        // Handle horizontal movement and scrolling
-        if (newX < scrollZone) {
-            // Near left edge - keep player at scrollZone and scroll background
-            newX = scrollZone;
-            if (game && moveX < 0) {
-                game.scrollOffset.x += moveX * 2; // Scroll background
-            }
-        } else if (newX > canvasWidth - scrollZone) {
-            // Near right edge - keep player at boundary and scroll background
-            newX = canvasWidth - scrollZone;
-            if (game && moveX > 0) {
-                game.scrollOffset.x += moveX * 2; // Scroll background
-            }
-        }
-        
-        // Handle vertical movement and scrolling
-        if (newY < scrollZone) {
-            // Near top edge - keep player at scrollZone and scroll background
-            newY = scrollZone;
-            if (game && moveY < 0) {
-                game.scrollOffset.y += moveY * 2; // Scroll background
-            }
-        } else if (newY > canvasHeight - scrollZone) {
-            // Near bottom edge - keep player at boundary and scroll background
-            newY = canvasHeight - scrollZone;
-            if (game && moveY > 0) {
-                game.scrollOffset.y += moveY * 2; // Scroll background
-            }
-        }
-        
-        // Apply the constrained position
-        this.x = newX;
-        this.y = newY;
+        // Apply movement directly (unlimited movement)
+        this.x += dx * this.speed * this.moveSpeed * dt;
+        this.y += dy * this.speed * this.moveSpeed * dt;
         
         // Update ghost animation
         if (this.ghostAnimation) {
