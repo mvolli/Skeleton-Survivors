@@ -226,23 +226,6 @@ class DynamicBackground {
         }
     }
     
-    initializeEnergyFields() {
-        // Pulsing energy fields
-        for (let i = 0; i < 5; i++) {
-                x: Math.random() * this.canvas.width * 2,
-                y: Math.random() * this.canvas.height * 2,
-                size: Math.random() * 200 + 100,
-                color: ['#4ecdc4', '#f39c12', '#e74c3c', '#9b59b6', '#2ecc71'][Math.floor(Math.random() * 5)],
-                pulseSpeed: Math.random() * 0.02 + 0.01,
-                pulseOffset: Math.random() * Math.PI * 2,
-                drift: {
-                    x: (Math.random() - 0.5) * 0.2,
-                    y: (Math.random() - 0.5) * 0.2
-                }
-            });
-        }
-    }
-    
     initializeGrid() {
         const gridSpacing = 80;
         for (let x = 0; x < this.canvas.width * 1.5; x += gridSpacing) {
@@ -320,11 +303,6 @@ class DynamicBackground {
             if (debris.x < -debris.size) debris.x = this.canvas.width * 3;
             if (debris.y > this.canvas.height * 3) debris.y = -debris.size;
             if (debris.y < -debris.size) debris.y = this.canvas.height * 3;
-        });
-        
-        // Update energy fields
-            field.x += field.drift.x * deltaTime * 0.01;
-            field.y += field.drift.y * deltaTime * 0.01;
         });
         
         // Update floating particles
@@ -421,24 +399,6 @@ class DynamicBackground {
                 ctx.ellipse(x, y, size * 1.6, size * 0.35, 0, 0, Math.PI * 2);
                 ctx.stroke();
             }
-        });
-        
-        // 3. Render energy fields (mid-background)
-            const x = field.x - scrollX * 0.05;
-            const y = field.y - scrollY * 0.05;
-            const pulse = 0.6 + 0.4 * (Math.sin(this.time * field.pulseSpeed + field.pulseOffset) + 1) / 2;
-            const size = field.size * pulse;
-            
-            const fieldGradient = ctx.createRadialGradient(x, y, 0, x, y, size);
-            fieldGradient.addColorStop(0, field.color.replace(')', ', 0.1)').replace('rgb', 'rgba'));
-            fieldGradient.addColorStop(0.5, field.color.replace(')', ', 0.05)').replace('rgb', 'rgba'));
-            fieldGradient.addColorStop(1, 'transparent');
-            
-            ctx.globalAlpha = 0.3 + pulse * 0.2;
-            ctx.fillStyle = fieldGradient;
-            ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
-            ctx.fill();
         });
         
         // 4. Render nebula clouds with enhanced visuals
