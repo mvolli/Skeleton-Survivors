@@ -1237,16 +1237,20 @@ class Game {
     }
     
     render() {
+        // Clear canvas completely first
+        this.ctx.fillStyle = '#0a0a0a';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
         // Apply screen shake
         this.ctx.save();
         this.screenShake.apply(this.ctx);
         
+        // Render dynamic background based on scroll offset (before camera transform)
+        this.background.render(this.ctx, {x: this.scrollOffset.x, y: this.scrollOffset.y});
+        
         // Apply camera transform for world objects
         this.ctx.save();
         this.ctx.translate(-this.camera.x, -this.camera.y);
-        
-        // Render dynamic background based on scroll offset
-        this.background.render(this.ctx, {x: this.scrollOffset.x, y: this.scrollOffset.y});
         
         // Draw game objects
         this.particles.forEach(particle => particle.render(this.ctx));
