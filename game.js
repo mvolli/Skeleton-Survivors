@@ -72,6 +72,56 @@ class GifAnimation {
     }
 }
 
+class MultiImageAnimation {
+    constructor(imagePaths, frameDuration = 100) {
+        this.images = [];
+        this.frameCount = imagePaths.length;
+        this.frameDuration = frameDuration;
+        this.currentFrame = 0;
+        this.frameTimer = 0;
+        this.loadedCount = 0;
+        this.loaded = false;
+        
+        // Load all images
+        imagePaths.forEach((path, index) => {
+            const img = new Image();
+            img.onload = () => {
+                this.loadedCount++;
+                if (this.loadedCount === this.frameCount) {
+                    this.loaded = true;
+                }
+            };
+            img.src = path;
+            this.images[index] = img;
+        });
+    }
+    
+    update(deltaTime) {
+        if (!this.loaded) return;
+        
+        this.frameTimer += deltaTime;
+        if (this.frameTimer >= this.frameDuration) {
+            this.currentFrame = (this.currentFrame + 1) % this.frameCount;
+            this.frameTimer = 0;
+        }
+    }
+    
+    render(ctx, x, y, scale = 1) {
+        if (!this.loaded) return;
+        
+        const currentImage = this.images[this.currentFrame];
+        if (!currentImage) return;
+        
+        const drawWidth = currentImage.width * scale;
+        const drawHeight = currentImage.height * scale;
+        
+        ctx.drawImage(
+            currentImage,
+            x - drawWidth/2, y - drawHeight/2, drawWidth, drawHeight
+        );
+    }
+}
+
 class AssetManager {
     constructor() {
         this.animations = {};
@@ -89,6 +139,14 @@ class AssetManager {
         
         // Ghost animation for player (using GIF)
         this.animations.ghostIdle = new GifAnimation('gfx/FANTASMA_GIF.gif', 1.0);
+        
+        // Bat animations (using multiple image files)
+        this.animations.batFly = new MultiImageAnimation([
+            'gfx/Bat1.png',
+            'gfx/Bat2.png', 
+            'gfx/Bat3.png',
+            'gfx/Bat4.png'
+        ], 150); // 150ms per frame for smooth flight
     }
     
     getAnimation(name) {
@@ -102,147 +160,37 @@ class GothicBackground {
         this.canvas = canvas;
         this.time = 0;
         
-        // Gothic forest background layers using downloaded images
-        this.distantStars = [];
-        this.stars = [];
-        this.nearStars = [];
-        this.nebula = [];
-        this.gasGiants = [];
-        this.spaceDebris = [];
-        this.gridLines = [];
+        // Top-down tileable background textures
+        this.tileTextures = {
+            grass: new Image(),
+            cobblestone: new Image()
+        };
         this.particles = [];
         
         // Animation properties
-        this.pulseIntensity = 0;
-        this.gameIntensity = 0; // Increases with game progression
-        this.warningIntensity = 0; // For boss warnings
+        this.gameIntensity = 0;
+        this.warningIntensity = 0;
+        this.imagesLoaded = 0;
+        this.totalImages = 2;
+        this.currentTile = 'grass'; // Switch between grass and cobblestone
         
-        this.initializeDistantStars();
-        this.initializeStars();
-        this.initializeNearStars();
-        this.initializeNebula();
-        this.initializeGasGiants();
-        this.initializeSpaceDebris();
-        this.initializeGrid();
+        // Load the tileable background images
+        this.loadTileTextures();
         this.initializeParticles();
     }
     
-    initializeDistantStars() {
-        // Very distant, small, slow-moving stars
-        for (let i = 0; i < 300; i++) {
-            this.distantStars.push({
-                x: Math.random() * this.canvas.width * 6 - this.canvas.width * 2,
-                y: Math.random() * this.canvas.height * 6 - this.canvas.height * 2,
-                size: Math.random() * 1.5 + 0.5,
-                brightness: Math.random() * 0.6 + 0.2,
-                twinkleSpeed: Math.random() * 0.01 + 0.005,
-                twinkleOffset: Math.random() * Math.PI * 2,
-                color: Math.random() > 0.8 ? '#e8f4fd' : '#ffffff'
-            });
-        }
+    loadTileTextures() {
+        this.tileTextures.grass.onload = () => this.onImageLoad();
+        this.tileTextures.grass.src = 'gfx/backgrounds/grass_tiles/Grass_01.png';
+        
+        this.tileTextures.cobblestone.onload = () => this.onImageLoad();
+        this.tileTextures.cobblestone.src = 'gfx/backgrounds/cobblestone_tiles/cobblestone/diffuse.png';
     }
-    
-    initializeStars() {
-        for (let i = 0; i < 200; i++) {
-            this.stars.push({
-                x: Math.random() * this.canvas.width * 4 - this.canvas.width,
-                y: Math.random() * this.canvas.height * 4 - this.canvas.height,
-                size: Math.random() * 3 + 1,
-                brightness: Math.random(),
-                twinkleSpeed: Math.random() * 0.02 + 0.01,
-                twinkleOffset: Math.random() * Math.PI * 2
-            });
-        }
-    }
-    
-    initializeNearStars() {
-        // Closer, larger, more prominent stars
-        for (let i = 0; i < 50; i++) {
-            this.nearStars.push({
-                x: Math.random() * this.canvas.width * 3 - this.canvas.width * 0.5,
-                y: Math.random() * this.canvas.height * 3 - this.canvas.height * 0.5,
-                size: Math.random() * 4 + 2,
-                brightness: Math.random() * 0.4 + 0.6,
-                twinkleSpeed: Math.random() * 0.03 + 0.01,
-                twinkleOffset: Math.random() * Math.PI * 2,
-                color: ['#ffffff', '#e8f4fd', '#fff2e6', '#ffe6f2', '#e6f9ff'][Math.floor(Math.random() * 5)],
-                glowSize: Math.random() * 3 + 2
-            });
-        }
-    }
-    
-    initializeNebula() {
-        for (let i = 0; i < 8; i++) {
-            this.nebula.push({
-                x: Math.random() * this.canvas.width * 1.5,
-                y: Math.random() * this.canvas.height * 1.5,
-                size: Math.random() * 300 + 100,
-                color: `hsl(${Math.random() * 60 + 220}, 60%, ${Math.random() * 20 + 10}%)`,
-                drift: {
-                    x: (Math.random() - 0.5) * 0.3,
-                    y: (Math.random() - 0.5) * 0.3
-                },
-                pulseSpeed: Math.random() * 0.01 + 0.005,
-                pulseOffset: Math.random() * Math.PI * 2
-            });
-        }
-    }
-    
-    initializeGasGiants() {
-        // Smaller, subtle distant planetary bodies
-        for (let i = 0; i < 2; i++) {
-            this.gasGiants.push({
-                x: Math.random() * this.canvas.width * 2 - this.canvas.width * 0.5,
-                y: Math.random() * this.canvas.height * 2 - this.canvas.height * 0.5,
-                size: Math.random() * 60 + 40, // Much smaller
-                color: ['#1a237e', '#4a148c', '#b71c1c', '#1b5e20'][Math.floor(Math.random() * 4)],
-                drift: {
-                    x: (Math.random() - 0.5) * 0.05, // Slower drift
-                    y: (Math.random() - 0.5) * 0.05
-                },
-                pulseSpeed: Math.random() * 0.002 + 0.001, // Much slower pulse
-                pulseOffset: Math.random() * Math.PI * 2,
-                hasRings: Math.random() > 0.8 // Fewer rings
-            });
-        }
-    }
-    
-    initializeSpaceDebris() {
-        // Floating debris and asteroids
-        for (let i = 0; i < 15; i++) {
-            this.spaceDebris.push({
-                x: Math.random() * this.canvas.width * 3 - this.canvas.width,
-                y: Math.random() * this.canvas.height * 3 - this.canvas.height,
-                size: Math.random() * 8 + 3,
-                drift: {
-                    x: (Math.random() - 0.5) * 0.3,
-                    y: (Math.random() - 0.5) * 0.3
-                },
-                rotation: 0,
-                rotationSpeed: (Math.random() - 0.5) * 0.02,
-                color: '#444444',
-                shape: Math.floor(Math.random() * 3) // 0: circle, 1: square, 2: triangle
-            });
-        }
-    }
-    
-    initializeGrid() {
-        const gridSpacing = 80;
-        for (let x = 0; x < this.canvas.width * 1.5; x += gridSpacing) {
-            this.gridLines.push({
-                type: 'vertical',
-                pos: x,
-                offset: Math.random() * Math.PI,
-                wave: Math.random() * 10 + 5
-            });
-        }
-        for (let y = 0; y < this.canvas.height * 1.5; y += gridSpacing) {
-            this.gridLines.push({
-                type: 'horizontal',
-                pos: y,
-                offset: Math.random() * Math.PI,
-                wave: Math.random() * 10 + 5
-            });
+
+    onImageLoad() {
+        this.imagesLoaded++;
+        if (this.imagesLoaded === this.totalImages) {
+            console.log('All tileable background textures loaded successfully!');
         }
     }
     
@@ -274,39 +222,8 @@ class GothicBackground {
             this.warningIntensity = Math.max(this.warningIntensity - deltaTime * 0.002, 0);
         }
         
-        // Update nebula drift
-        this.nebula.forEach(cloud => {
-            cloud.x += cloud.drift.x * deltaTime * 0.01;
-            cloud.y += cloud.drift.y * deltaTime * 0.01;
-            
-            // Wrap around
-            if (cloud.x > this.canvas.width * 1.5) cloud.x = -cloud.size;
-            if (cloud.x < -cloud.size) cloud.x = this.canvas.width * 1.5;
-            if (cloud.y > this.canvas.height * 1.5) cloud.y = -cloud.size;
-            if (cloud.y < -cloud.size) cloud.y = this.canvas.height * 1.5;
-        });
-        
-        // Update gas giants
-        this.gasGiants.forEach(giant => {
-            giant.x += giant.drift.x * deltaTime * 0.001;
-            giant.y += giant.drift.y * deltaTime * 0.001;
-        });
-        
-        // Update space debris
-        this.spaceDebris.forEach(debris => {
-            debris.x += debris.drift.x * deltaTime * 0.01;
-            debris.y += debris.drift.y * deltaTime * 0.01;
-            debris.rotation += debris.rotationSpeed * deltaTime * 0.01;
-            
-            // Wrap around
-            if (debris.x > this.canvas.width * 3) debris.x = -debris.size;
-            if (debris.x < -debris.size) debris.x = this.canvas.width * 3;
-            if (debris.y > this.canvas.height * 3) debris.y = -debris.size;
-            if (debris.y < -debris.size) debris.y = this.canvas.height * 3;
-        });
-        
         // Update floating particles
-        this.particles.forEach((particle, index) => {
+        this.particles.forEach((particle) => {
             particle.x += particle.vx * deltaTime * 0.1;
             particle.y += particle.vy * deltaTime * 0.1;
             particle.life += deltaTime;
@@ -330,260 +247,142 @@ class GothicBackground {
         const scrollX = scroll.x || 0;
         const scrollY = scroll.y || 0;
         
-        // Save context
-        ctx.save();
-        
-        // Enhanced gradient background with depth
-        const baseIntensity = 0.1 + this.gameIntensity * 0.1;
-        const warningRed = this.warningIntensity * 0.3;
-        
-        const gradient = ctx.createRadialGradient(
-            this.canvas.width / 2, this.canvas.height / 2, 0,
-            this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height)
-        );
-        
-        gradient.addColorStop(0, `rgba(${Math.floor(8 + warningRed * 50)}, ${Math.floor(12 + baseIntensity * 25)}, ${Math.floor(28 + baseIntensity * 15)}, 1)`);
-        gradient.addColorStop(0.4, `rgba(${Math.floor(15 + warningRed * 60)}, ${Math.floor(20 + baseIntensity * 30)}, ${Math.floor(35 + baseIntensity * 20)}, 1)`);
-        gradient.addColorStop(0.8, `rgba(${Math.floor(5 + warningRed * 40)}, ${Math.floor(8 + baseIntensity * 20)}, ${Math.floor(15 + baseIntensity * 10)}, 1)`);
-        gradient.addColorStop(1, `rgba(${Math.floor(2 + warningRed * 30)}, ${Math.floor(4 + baseIntensity * 15)}, ${Math.floor(8 + baseIntensity * 8)}, 1)`);
-        
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // 1. Render distant stars (deepest layer)
-        ctx.globalAlpha = 0.6 + this.gameIntensity * 0.1;
-        this.distantStars.forEach(star => {
-            const x = star.x - scrollX * 0.01;
-            const y = star.y - scrollY * 0.01;
+        // Only render tileable background if textures are loaded
+        if (this.imagesLoaded === this.totalImages) {
+            // Choose current tile based on game state or level
+            const currentTexture = this.tileTextures[this.currentTile];
+            this.renderTileBackground(ctx, currentTexture, scrollX, scrollY);
+        } else {
+            // Fallback gradient while textures load
+            const gradient = ctx.createRadialGradient(
+                this.canvas.width / 2, this.canvas.height / 2, 0,
+                this.canvas.width / 2, this.canvas.height / 2, this.canvas.width * 0.8
+            );
+            gradient.addColorStop(0, '#2a4a2a');
+            gradient.addColorStop(0.4, '#1a3a1a');
+            gradient.addColorStop(0.8, '#0f2f0f');
+            gradient.addColorStop(1, '#051505');
             
-            if (x < -20 || x > this.canvas.width + 20 || y < -20 || y > this.canvas.height + 20) return;
-            
-            const twinkle = 0.5 + 0.5 * (Math.sin(this.time * star.twinkleSpeed + star.twinkleOffset) + 1) / 2;
-            const brightness = star.brightness * twinkle;
-            
-            ctx.globalAlpha = brightness * 0.4;
-            ctx.fillStyle = star.color;
-            ctx.beginPath();
-            ctx.arc(x, y, star.size, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        // 2. Render gas giants (far background) - subtle and static
-        ctx.globalAlpha = 0.15 + this.gameIntensity * 0.05;
-        this.gasGiants.forEach(giant => {
-            const x = giant.x - scrollX * 0.03;
-            const y = giant.y - scrollY * 0.03;
-            const pulse = 1 + Math.sin(this.time * giant.pulseSpeed + giant.pulseOffset) * 0.03; // Much smaller pulse
-            const size = giant.size * pulse;
-            
-            // Main planet body
-            const planetGradient = ctx.createRadialGradient(x - size * 0.3, y - size * 0.3, 0, x, y, size);
-            planetGradient.addColorStop(0, giant.color.replace(')', ', 0.4)').replace('rgb', 'rgba'));
-            planetGradient.addColorStop(0.7, giant.color.replace(')', ', 0.2)').replace('rgb', 'rgba'));
-            planetGradient.addColorStop(1, giant.color.replace(')', ', 0.05)').replace('rgb', 'rgba'));
-            
-            ctx.fillStyle = planetGradient;
-            ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Planetary rings
-            if (giant.hasRings) {
-                ctx.globalAlpha = 0.2;
-                ctx.strokeStyle = `rgba(200, 200, 200, 0.3)`;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.ellipse(x, y, size * 1.4, size * 0.3, 0, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.ellipse(x, y, size * 1.6, size * 0.35, 0, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-        });
-        
-        // 4. Render nebula clouds with enhanced visuals
-        ctx.globalAlpha = 0.4 + this.gameIntensity * 0.2;
-        this.nebula.forEach(cloud => {
-            const x = cloud.x - scrollX * 0.08;
-            const y = cloud.y - scrollY * 0.08;
-            const pulse = 1 + Math.sin(this.time * cloud.pulseSpeed + cloud.pulseOffset) * 0.3;
-            const size = cloud.size * pulse;
-            
-            // Multiple nebula layers for depth
-            for (let layer = 0; layer < 3; layer++) {
-                const layerSize = size * (0.4 + layer * 0.3);
-                const layerAlpha = 0.3 - layer * 0.1;
-                
-                const nebulaGradient = ctx.createRadialGradient(x, y, 0, x, y, layerSize);
-                nebulaGradient.addColorStop(0, cloud.color.replace(')', `, ${layerAlpha})`).replace('hsl', 'hsla'));
-                nebulaGradient.addColorStop(0.6, cloud.color.replace(')', `, ${layerAlpha * 0.5})`).replace('hsl', 'hsla'));
-                nebulaGradient.addColorStop(1, 'transparent');
-                
-                ctx.fillStyle = nebulaGradient;
-                ctx.beginPath();
-                ctx.arc(x + layer * 10, y + layer * 5, layerSize, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        });
-        
-        // 5. Render space debris
-        ctx.globalAlpha = 0.6;
-        this.spaceDebris.forEach(debris => {
-            const x = debris.x - scrollX * 0.15;
-            const y = debris.y - scrollY * 0.15;
-            
-            if (x < -20 || x > this.canvas.width + 20 || y < -20 || y > this.canvas.height + 20) return;
-            
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(debris.rotation);
-            ctx.fillStyle = debris.color;
-            
-            switch(debris.shape) {
-                case 0: // circle
-                    ctx.beginPath();
-                    ctx.arc(0, 0, debris.size, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                case 1: // square
-                    ctx.fillRect(-debris.size/2, -debris.size/2, debris.size, debris.size);
-                    break;
-                case 2: // triangle
-                    ctx.beginPath();
-                    ctx.moveTo(0, -debris.size);
-                    ctx.lineTo(debris.size, debris.size);
-                    ctx.lineTo(-debris.size, debris.size);
-                    ctx.closePath();
-                    ctx.fill();
-                    break;
-            }
-            ctx.restore();
-        });
-        
-        // 6. Render main stars with enhanced effects
-        ctx.globalAlpha = 1;
-        this.stars.forEach(star => {
-            const x = star.x - scrollX * 0.05;
-            const y = star.y - scrollY * 0.05;
-            
-            if (x < -50 || x > this.canvas.width + 50 || y < -50 || y > this.canvas.height + 50) return;
-            
-            const twinkle = 0.3 + 0.7 * (Math.sin(this.time * star.twinkleSpeed + star.twinkleOffset) + 1) / 2;
-            const brightness = star.brightness * twinkle * (0.8 + this.gameIntensity * 0.2);
-            
-            ctx.globalAlpha = brightness;
-            ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
-            ctx.beginPath();
-            ctx.arc(x, y, star.size, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Enhanced star glow
-            if (star.size > 2) {
-                ctx.globalAlpha = brightness * 0.4;
-                ctx.fillStyle = `rgba(78, 205, 196, ${brightness * 0.2})`;
-                ctx.beginPath();
-                ctx.arc(x, y, star.size * 3, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        });
-        
-        // 7. Render near stars (closest layer)
-        this.nearStars.forEach(star => {
-            const x = star.x - scrollX * 0.1;
-            const y = star.y - scrollY * 0.1;
-            
-            if (x < -100 || x > this.canvas.width + 100 || y < -100 || y > this.canvas.height + 100) return;
-            
-            const twinkle = 0.4 + 0.6 * (Math.sin(this.time * star.twinkleSpeed + star.twinkleOffset) + 1) / 2;
-            const brightness = star.brightness * twinkle;
-            
-            // Main star
-            ctx.globalAlpha = brightness;
-            ctx.fillStyle = star.color;
-            ctx.beginPath();
-            ctx.arc(x, y, star.size, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Star glow effect
-            ctx.globalAlpha = brightness * 0.3;
-            const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, star.glowSize * 3);
-            glowGradient.addColorStop(0, star.color.replace(')', ', 0.6)').replace('rgb', 'rgba'));
-            glowGradient.addColorStop(0.5, star.color.replace(')', ', 0.2)').replace('rgb', 'rgba'));
-            glowGradient.addColorStop(1, 'transparent');
-            ctx.fillStyle = glowGradient;
-            ctx.beginPath();
-            ctx.arc(x, y, star.glowSize * 3, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        // 8. Render animated grid (foreground)
-        ctx.globalAlpha = 0.08 + this.gameIntensity * 0.03;
-        ctx.strokeStyle = `rgba(78, 205, 196, ${0.2 + this.warningIntensity * 0.3})`;
-        ctx.lineWidth = 1;
-        
-        const gridSpacing = 80;
-        const startX = Math.floor((scrollX * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
-        const endX = startX + this.canvas.width + gridSpacing * 2;
-        const startY = Math.floor((scrollY * 0.3) / gridSpacing) * gridSpacing - gridSpacing;
-        const endY = startY + this.canvas.height + gridSpacing * 2;
-        
-        for (let x = startX; x <= endX; x += gridSpacing) {
-            ctx.beginPath();
-            const screenX = x - scrollX * 0.3;
-            const wave = Math.sin(this.time * 0.001 + x * 0.01) * 3;
-            ctx.moveTo(screenX + wave, 0);
-            ctx.lineTo(screenX - wave, this.canvas.height);
-            ctx.stroke();
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
         
-        for (let y = startY; y <= endY; y += gridSpacing) {
-            ctx.beginPath();
-            const screenY = y - scrollY * 0.3;
-            const wave = Math.sin(this.time * 0.001 + y * 0.01) * 3;
-            ctx.moveTo(0, screenY + wave);
-            ctx.lineTo(this.canvas.width, screenY - wave);
-            ctx.stroke();
-        }
-        
-        // 9. Render floating particles (front layer)
-        ctx.globalAlpha = 0.8;
+        // Render atmospheric particles
+        ctx.globalAlpha = 0.3;
         this.particles.forEach(particle => {
-            const x = particle.x - scrollX * 0.02;
-            const y = particle.y - scrollY * 0.02;
-            const alpha = 1 - (particle.life / particle.maxLife);
+            const x = particle.x - scrollX * 0.1;
+            const y = particle.y - scrollY * 0.1;
             
-            ctx.globalAlpha = alpha * 0.6;
-            ctx.fillStyle = particle.color;
+            ctx.fillStyle = 'rgba(180, 200, 180, 0.4)';
             ctx.beginPath();
             ctx.arc(x, y, particle.size, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Restore context
-        ctx.restore();
+        // Render world-aligned grid that matches tile boundaries
+        this.renderWorldGrid(ctx, scrollX, scrollY);
+        
+        // Reset alpha
+        ctx.globalAlpha = 1;
+    }
+
+    renderTileBackground(ctx, texture, scrollX, scrollY) {
+        if (!texture || !texture.complete) return;
+        
+        const tileSize = 512; // Standard tile size for the textures
+        
+        // Calculate tile positions based on world coordinates (not screen coordinates)
+        const startTileX = Math.floor(scrollX / tileSize) - 1;
+        const endTileX = Math.ceil((scrollX + this.canvas.width) / tileSize) + 1;
+        const startTileY = Math.floor(scrollY / tileSize) - 1;
+        const endTileY = Math.ceil((scrollY + this.canvas.height) / tileSize) + 1;
+        
+        // Render tiles seamlessly across the viewport
+        for (let tileX = startTileX; tileX <= endTileX; tileX++) {
+            for (let tileY = startTileY; tileY <= endTileY; tileY++) {
+                const drawX = tileX * tileSize - scrollX;
+                const drawY = tileY * tileSize - scrollY;
+                
+                // Only draw tiles that are visible on screen
+                if (drawX + tileSize >= 0 && drawX <= this.canvas.width &&
+                    drawY + tileSize >= 0 && drawY <= this.canvas.height) {
+                    ctx.drawImage(texture, drawX, drawY, tileSize, tileSize);
+                }
+            }
+        }
+    }
+    
+    // Method to switch between different tile types
+    switchTileType(tileType) {
+        if (this.tileTextures[tileType]) {
+            this.currentTile = tileType;
+        }
+    }
+    
+    // Render world-aligned grid that provides consistent map reference
+    renderWorldGrid(ctx, scrollX, scrollY) {
+        // Main tile grid (matches 512x512 tile boundaries)
+        ctx.globalAlpha = 0.08;
+        ctx.strokeStyle = 'rgba(120, 140, 120, 0.3)';
+        ctx.lineWidth = 2;
+        
+        const tileSize = 512;
+        this.renderGridLines(ctx, scrollX, scrollY, tileSize);
+        
+        // Secondary grid (smaller divisions for more detailed reference)
+        ctx.globalAlpha = 0.04;
+        ctx.strokeStyle = 'rgba(100, 120, 100, 0.2)';
+        ctx.lineWidth = 1;
+        
+        const subGridSize = 128; // 4 subdivisions per tile
+        this.renderGridLines(ctx, scrollX, scrollY, subGridSize);
+        
+        // Optional: Major grid lines every 4 tiles for large-scale navigation
+        ctx.globalAlpha = 0.12;
+        ctx.strokeStyle = 'rgba(140, 160, 140, 0.4)';
+        ctx.lineWidth = 3;
+        
+        const majorGridSize = 2048; // Every 4 tiles
+        this.renderGridLines(ctx, scrollX, scrollY, majorGridSize);
+    }
+    
+    // Helper method to render grid lines at specific spacing
+    renderGridLines(ctx, scrollX, scrollY, gridSpacing) {
+        // Calculate grid bounds based on world coordinates
+        const startX = Math.floor(scrollX / gridSpacing) * gridSpacing - gridSpacing;
+        const endX = startX + this.canvas.width + gridSpacing * 2;
+        const startY = Math.floor(scrollY / gridSpacing) * gridSpacing - gridSpacing;
+        const endY = startY + this.canvas.height + gridSpacing * 2;
+        
+        // Vertical lines
+        for (let x = startX; x <= endX; x += gridSpacing) {
+            const screenX = x - scrollX;
+            if (screenX >= -gridSpacing && screenX <= this.canvas.width + gridSpacing) {
+                ctx.beginPath();
+                ctx.moveTo(screenX, 0);
+                ctx.lineTo(screenX, this.canvas.height);
+                ctx.stroke();
+            }
+        }
+        
+        // Horizontal lines
+        for (let y = startY; y <= endY; y += gridSpacing) {
+            const screenY = y - scrollY;
+            if (screenY >= -gridSpacing && screenY <= this.canvas.height + gridSpacing) {
+                ctx.beginPath();
+                ctx.moveTo(0, screenY);
+                ctx.lineTo(this.canvas.width, screenY);
+                ctx.stroke();
+            }
+        }
     }
     
     resize(width, height) {
         this.canvas.width = width;
         this.canvas.height = height;
         
-        // Reinitialize all layers with new dimensions
-        this.distantStars = [];
-        this.stars = [];
-        this.nearStars = [];
-        this.nebula = [];
-        this.gasGiants = [];
-        this.spaceDebris = [];
-        this.gridLines = [];
+        // Reinitialize particles with new dimensions
         this.particles = [];
-        
-        this.initializeDistantStars();
-        this.initializeStars();
-        this.initializeNearStars();
-        this.initializeNebula();
-        this.initializeGasGiants();
-        this.initializeSpaceDebris();
-        this.initializeGrid();
         this.initializeParticles();
     }
 }
@@ -851,11 +650,20 @@ class Game {
         this.zombieUnlockTime = 600000; // 10 minutes in milliseconds
         this.zombiesUnlocked = false;
         
+        // Post-boss progression system
+        this.bossesDefeated = 0;
+        this.difficultyMultiplier = 1.0; // Increases after each boss defeat
+        
         // Apply boss timer meta upgrade
         if (saveManager && saveManager.currentSlot) {
             const saveData = saveManager.getSaveData(saveManager.currentSlot);
             const metaUpgrades = saveData.metaUpgrades;
-            this.bossSpawnInterval += metaUpgrades.bossTimer * 10000; // +10s per level
+            const originalInterval = this.bossSpawnInterval;
+            // Boss timer meta upgrade should REDUCE spawn interval (make bosses spawn faster)
+            this.bossSpawnInterval = Math.max(60000, this.bossSpawnInterval - metaUpgrades.bossTimer * 10000); // -10s per level, minimum 1 minute
+            console.log(`Boss Timer Meta Upgrade: Level ${metaUpgrades.bossTimer}, Interval: ${originalInterval/1000}s -> ${this.bossSpawnInterval/1000}s`);
+        } else {
+            console.log(`Boss Timer: ${this.bossSpawnInterval/1000}s (no meta upgrades)`);
         }
         
         this.setupEventListeners();
@@ -1033,7 +841,14 @@ class Game {
         
         // Boss spawning system
         this.bossSpawnTimer += deltaTime;
+        
+        // Debug logging every 30 seconds
+        if (Math.floor(this.bossSpawnTimer / 30000) > Math.floor((this.bossSpawnTimer - deltaTime) / 30000)) {
+            console.log(`Boss Timer: ${(this.bossSpawnTimer/1000).toFixed(1)}s / ${(this.bossSpawnInterval/1000).toFixed(1)}s, Level: ${this.level}, Current Boss: ${this.currentBoss ? 'YES' : 'NO'}`);
+        }
+        
         if (this.bossSpawnTimer >= this.bossSpawnInterval && !this.currentBoss && this.level >= 5) {
+            console.log('Triggering boss warning!');
             this.triggerBossWarning();
             this.bossSpawnTimer = 0;
         }
@@ -1042,6 +857,7 @@ class Game {
         if (this.bossWarning) {
             this.bossWarningTimer += deltaTime;
             if (this.bossWarningTimer >= 3000) { // 3 second warning
+                console.log('Spawning boss after warning!');
                 this.spawnBoss();
                 this.bossWarning = null;
                 this.bossWarningTimer = 0;
@@ -1061,7 +877,9 @@ class Game {
             // Check if boss is dead
             if (this.currentBoss.health <= 0) {
                 this.score += this.currentBoss.scoreValue;
-                this.experience += Math.floor(this.currentBoss.expValue * this.player.expMultiplier);
+                // Apply difficulty scaling to boss XP rewards
+                const difficultyXpMultiplier = this.bossesDefeated > 0 ? this.difficultyMultiplier : 1.0;
+                this.experience += Math.floor(this.currentBoss.expValue * this.player.expMultiplier * difficultyXpMultiplier);
                 this.createDeathParticles(this.currentBoss.x, this.currentBoss.y);
                 
                 // Guaranteed diamond rewards for boss defeats - make them feel earned!
@@ -1074,6 +892,9 @@ class Game {
                 }
                 
                 this.currentBoss = null;
+                
+                // Increase difficulty after boss defeat
+                this.onBossDefeated();
                 
                 // Reset boss timer when boss is defeated
                 this.bossSpawnTimer = 0;
@@ -1187,7 +1008,9 @@ class Game {
         this.enemies = this.enemies.filter(enemy => {
             if (enemy.health <= 0) {
                 this.score += enemy.scoreValue;
-                this.experience += Math.floor(enemy.expValue * this.player.expMultiplier);
+                // Apply difficulty scaling to XP rewards
+                const difficultyXpMultiplier = this.bossesDefeated > 0 ? this.difficultyMultiplier : 1.0;
+                this.experience += Math.floor(enemy.expValue * this.player.expMultiplier * difficultyXpMultiplier);
                 
                 // Chance to drop items (affected by luck)
                 const luckBonus = this.player.luck;
@@ -1440,8 +1263,13 @@ class Game {
         const x = this.player.x + Math.cos(angle) * spawnDistance;
         const y = this.player.y + Math.sin(angle) * spawnDistance;
         
-        // Enemy types based on zombie unlock status
+        // Enemy types based on level and unlock conditions
         let enemyTypes = [BasicSkeletonEnemy, FastSkeletonEnemy, TankSkeletonEnemy];
+        
+        // Add bats after level 3 for early variety
+        if (this.level >= 3) {
+            enemyTypes.push(BatEnemy);
+        }
         
         if (this.zombiesUnlocked) {
             // Add zombie types after 10 minutes - they can spawn alongside skeletons
@@ -1451,12 +1279,8 @@ class Game {
         const EnemyClass = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
         const enemy = new EnemyClass(x, y, this.assets);
         
-        // Scale enemy health from level 10 onwards
-        if (this.level >= 10) {
-            const healthMultiplier = 1 + (this.level - 9) * 0.15; // +15% health per level after 10
-            enemy.health = Math.floor(enemy.health * healthMultiplier);
-            enemy.maxHealth = enemy.health;
-        }
+        // Apply comprehensive enemy scaling
+        this.applyEnemyScaling(enemy);
         
         this.enemies.push(enemy);
     }
@@ -1492,12 +1316,96 @@ class Game {
         
         this.currentBoss = new BossClass(x, y, this.assets);
         
-        // Scale boss health with level
+        // Apply comprehensive boss scaling
+        this.applyBossScaling(this.currentBoss);
+    }
+    
+    // Handle boss defeat progression
+    onBossDefeated() {
+        this.bossesDefeated++;
+        
+        // Increase difficulty multiplier after each boss defeat
+        // Start scaling after first boss (bosses defeated >= 1)
+        this.difficultyMultiplier = 1.0 + (this.bossesDefeated * 0.12); // +12% per boss defeated
+        
+        console.log(`Boss defeated! Total bosses defeated: ${this.bossesDefeated}, Difficulty: ${this.difficultyMultiplier.toFixed(2)}x, XP Multiplier: ${this.difficultyMultiplier.toFixed(2)}x`);
+    }
+    
+    // Apply comprehensive enemy scaling based on level and boss defeats
+    applyEnemyScaling(enemy) {
+        let healthMultiplier = 1.0;
+        let speedMultiplier = 1.0;
+        let damageMultiplier = 1.0;
+        
+        // Level-based scaling (original system)
         if (this.level >= 10) {
-            const healthMultiplier = 1 + (this.level - 9) * 0.2; // +20% health per level after 10
-            this.currentBoss.health = Math.floor(this.currentBoss.health * healthMultiplier);
-            this.currentBoss.maxHealth = this.currentBoss.health;
+            const levelScaling = 1 + (this.level - 9) * 0.15; // +15% per level after 10
+            healthMultiplier *= levelScaling;
         }
+        
+        // Post-boss difficulty scaling (new system)
+        if (this.bossesDefeated > 0) {
+            healthMultiplier *= this.difficultyMultiplier;
+            speedMultiplier *= Math.min(this.difficultyMultiplier, 1.5); // Cap speed at 50% increase
+            damageMultiplier *= Math.min(this.difficultyMultiplier, 1.3); // Cap damage at 30% increase
+        }
+        
+        // Apply health scaling
+        if (healthMultiplier > 1.0) {
+            enemy.health = Math.floor(enemy.health * healthMultiplier);
+            enemy.maxHealth = enemy.health;
+        }
+        
+        // Apply speed scaling
+        if (speedMultiplier > 1.0 && enemy.speed) {
+            enemy.speed = Math.floor(enemy.speed * speedMultiplier);
+        }
+        
+        // Apply damage scaling (for enemies that have damage property)
+        if (damageMultiplier > 1.0 && enemy.damage) {
+            enemy.damage = Math.floor(enemy.damage * damageMultiplier);
+        }
+        
+        // Special scaling for ranged enemies
+        if (enemy instanceof RangedZombieEnemy && this.bossesDefeated > 0) {
+            // Reduce shooting cooldown for more frequent attacks
+            if (enemy.shootCooldown) {
+                enemy.shootCooldown = Math.max(500, enemy.shootCooldown / Math.min(this.difficultyMultiplier, 1.4));
+            }
+        }
+    }
+    
+    // Apply comprehensive boss scaling based on level and previous boss defeats
+    applyBossScaling(boss) {
+        let healthMultiplier = 1.0;
+        let speedMultiplier = 1.0;
+        
+        // Level-based scaling (original system)
+        if (this.level >= 10) {
+            const levelScaling = 1 + (this.level - 9) * 0.2; // +20% per level after 10
+            healthMultiplier *= levelScaling;
+        }
+        
+        // Post-boss difficulty scaling - bosses get stronger based on how many were defeated
+        if (this.bossesDefeated > 0) {
+            // Bosses scale more aggressively than regular enemies
+            const bossScaling = 1.0 + (this.bossesDefeated * 0.18); // +18% per previous boss defeated
+            healthMultiplier *= bossScaling;
+            speedMultiplier *= Math.min(bossScaling, 1.3); // Cap speed increase at 30%
+        }
+        
+        // Apply health scaling
+        if (healthMultiplier > 1.0) {
+            boss.health = Math.floor(boss.health * healthMultiplier);
+            boss.maxHealth = boss.health;
+        }
+        
+        // Apply speed scaling
+        if (speedMultiplier > 1.0 && boss.speed) {
+            boss.speed = Math.floor(boss.speed * speedMultiplier);
+        }
+        
+        console.log(`Boss spawned with ${healthMultiplier.toFixed(2)}x health scaling (Level: ${this.level}, Bosses defeated: ${this.bossesDefeated})`);
     }
     
     checkCollision(obj1, obj2) {
@@ -1563,7 +1471,9 @@ class Game {
     
     collectItem(item) {
         if (item instanceof ExperienceOrb) {
-            this.experience += Math.floor(item.value * this.player.expMultiplier);
+            // Apply difficulty scaling to experience orb rewards
+            const difficultyXpMultiplier = this.bossesDefeated > 0 ? this.difficultyMultiplier : 1.0;
+            this.experience += Math.floor(item.value * this.player.expMultiplier * difficultyXpMultiplier);
         } else if (item instanceof HealthPickup) {
             this.player.health = Math.min(this.player.health + item.value, this.player.maxHealth);
         } else if (item instanceof DiamondPickup) {
@@ -2007,6 +1917,142 @@ class TankSkeletonEnemy extends BasicSkeletonEnemy {
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 1;
             ctx.strokeRect(this.x - barWidth/2, this.y - this.radius - 20, barWidth, barHeight);
+        }
+        
+        ctx.restore();
+    }
+}
+
+class BatEnemy {
+    constructor(x, y, assets) {
+        this.x = x;
+        this.y = y;
+        this.radius = 20; // Smaller than skeletons
+        this.speed = 80; // Fast and agile
+        this.health = 35; // Low health, high speed
+        this.maxHealth = 35;
+        this.scoreValue = 12;
+        this.expValue = 10;
+        this.scale = 0.8; // Smaller scale
+        
+        // Flying behavior properties
+        this.swayAmplitude = 30; // How much it sways side to side
+        this.swaySpeed = 0.003;
+        this.swayOffset = Math.random() * Math.PI * 2; // Random starting sway
+        this.baseY = y; // Starting Y position for sway calculation
+        this.time = 0;
+        
+        // Dive attack properties
+        this.diveTimer = 0;
+        this.diveInterval = 3000 + Math.random() * 2000; // 3-5 seconds between dives
+        this.isDiving = false;
+        this.diveSpeed = 200;
+        this.diveTargetX = x;
+        this.diveTargetY = y;
+        
+        // Get bat animation from asset manager
+        this.flyAnimation = assets.getAnimation('batFly');
+        this.currentAnimation = this.flyAnimation;
+    }
+    
+    update(deltaTime, player) {
+        const dt = deltaTime / 1000;
+        this.time += deltaTime;
+        this.diveTimer += deltaTime;
+        
+        if (!this.isDiving) {
+            // Normal flying behavior - approach player with swaying motion
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 100) { // Keep some distance from player
+                // Move towards player but not directly
+                this.x += (dx / distance) * this.speed * 0.6 * dt;
+                this.y += (dy / distance) * this.speed * 0.6 * dt;
+            }
+            
+            // Add swaying motion for realistic flying
+            const swayOffset = Math.sin(this.time * this.swaySpeed + this.swayOffset) * this.swayAmplitude;
+            this.x += swayOffset * dt * 0.1;
+            
+            // Vertical bobbing
+            const bobOffset = Math.sin(this.time * this.swaySpeed * 1.5 + this.swayOffset) * 10;
+            this.y += bobOffset * dt * 0.1;
+            
+            // Check if it's time to dive
+            if (this.diveTimer >= this.diveInterval && distance < 200) {
+                this.startDive(player);
+            }
+        } else {
+            // Diving behavior - fast direct attack
+            const dx = this.diveTargetX - this.x;
+            const dy = this.diveTargetY - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 10) {
+                this.x += (dx / distance) * this.diveSpeed * dt;
+                this.y += (dy / distance) * this.diveSpeed * dt;
+            } else {
+                // Dive complete, return to normal behavior
+                this.isDiving = false;
+                this.diveTimer = 0;
+                this.diveInterval = 2000 + Math.random() * 3000; // Reset dive timer
+            }
+        }
+        
+        // Update animation
+        if (this.currentAnimation) {
+            this.currentAnimation.update(deltaTime);
+        }
+    }
+    
+    startDive(player) {
+        this.isDiving = true;
+        this.diveTargetX = player.x;
+        this.diveTargetY = player.y;
+    }
+    
+    takeDamage(amount) {
+        this.health -= amount;
+    }
+    
+    render(ctx) {
+        ctx.save();
+        
+        // Render bat sprite
+        if (this.currentAnimation) {
+            // Flip sprite during dive for more dynamic look
+            if (this.isDiving) {
+                ctx.scale(-1, 1);
+                this.currentAnimation.render(ctx, -this.x, this.y, this.scale);
+            } else {
+                this.currentAnimation.render(ctx, this.x, this.y, this.scale);
+            }
+        } else {
+            // Fallback circle if sprites not loaded
+            ctx.fillStyle = '#8B4513'; // Brown color for bat
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Health bar (same as other enemies)
+        if (this.health < this.maxHealth) {
+            const barWidth = 30;
+            const barHeight = 3;
+            const healthPercent = this.health / this.maxHealth;
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 12, barWidth, barHeight);
+            
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(this.x - barWidth/2, this.y - this.radius - 12, barWidth * healthPercent, barHeight);
+            
+            // Health bar border
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(this.x - barWidth/2, this.y - this.radius - 12, barWidth, barHeight);
         }
         
         ctx.restore();
