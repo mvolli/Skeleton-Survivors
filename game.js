@@ -1661,6 +1661,7 @@ class Player {
         this.projectileSize = 1.0; // Multiplier for projectile size (1.0 = normal size)
         this.expMultiplier = 1.0; // Multiplier for experience gain (1.0 = normal XP)
         this.multishot = 0; // Number of bullets that split on hit
+        this.hasMultishotUpgrade = false; // Track if player has unlocked multishot
         this.freezeChance = 0; // Chance to freeze enemies
         this.lifesteal = 0; // Life steal amount
         this.criticalHit = 0; // Critical hit chance
@@ -1686,7 +1687,8 @@ class Player {
             // New meta upgrades
             this.attackSpeed += metaUpgrades.attackSpeed * 0.15;
             this.penetration += metaUpgrades.penetration;
-            this.multishot += metaUpgrades.multishot;
+            // Store meta multishot for later (only applies after first multishot powerup)
+            this.metaMultishot = metaUpgrades.multishot || 0;
             this.expMultiplier += metaUpgrades.xpBoost * 0.25;
             this.invincibilityDuration += metaUpgrades.invincibility * 500; // +0.5s per level
             this.pickup += metaUpgrades.pickupRange * 0.2; // +20% pickup range per level
@@ -2956,7 +2958,9 @@ class BasicWeapon {
             const finalDamage = Math.floor(this.damage * player.damage);
             
             // Calculate number of projectiles to fire
-            const projectileCount = 1 + (player.multishot || 0);
+            // Always start with 1 shot, only add multishot if player has unlocked it
+            const effectiveMultishot = player.hasMultishotUpgrade ? (player.multishot || 0) : 0;
+            const projectileCount = 1 + effectiveMultishot;
             
             // Calculate spread - 30 degrees total spread, scaled by projectile count
             const totalSpreadRadians = (Math.PI / 6) * Math.min(projectileCount / 3, 1.5); // 30° base, max 45°
@@ -3428,7 +3432,9 @@ class FireballWeapon {
             const baseAngle = Math.atan2(dy, dx);
             
             // Calculate number of projectiles to fire
-            const projectileCount = 1 + (player.multishot || 0);
+            // Always start with 1 shot, only add multishot if player has unlocked it
+            const effectiveMultishot = player.hasMultishotUpgrade ? (player.multishot || 0) : 0;
+            const projectileCount = 1 + Math.floor(effectiveMultishot);
             
             // Calculate spread - 25 degrees total for fireballs (tighter than basic weapon)
             const totalSpreadRadians = (Math.PI / 7.2) * Math.min(projectileCount / 3, 1.2); // 25° base, max 30°
@@ -5531,6 +5537,14 @@ class PowerupManager {
                 break;
             case "multishot":
                 player.multishot += powerup.value;
+                // Enable multishot on first pickup, and apply any stored meta upgrades
+                if (!player.hasMultishotUpgrade) {
+                    player.hasMultishotUpgrade = true;
+                    // Apply stored meta multishot upgrades now that multishot is unlocked
+                    if (player.metaMultishot) {
+                        player.multishot += player.metaMultishot;
+                    }
+                }
                 break;
             case "regen":
                 // TODO: Implement regeneration
