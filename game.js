@@ -146,7 +146,7 @@ class AssetManager {
             'gfx/Bat2.png', 
             'gfx/Bat3.png',
             'gfx/Bat4.png'
-        ], 200); // 200ms per frame for smooth flight
+        ], 350); // 350ms per frame for slower, more natural flight
     }
     
     getAnimation(name) {
@@ -1981,7 +1981,7 @@ class BatEnemy {
         this.diveTimer = 0;
         this.diveInterval = 3000 + Math.random() * 2000; // 3-5 seconds between dives
         this.isDiving = false;
-        this.diveSpeed = 200;
+        this.diveSpeed = 320; // Faster, more aggressive dive attacks
         this.diveTargetX = x;
         this.diveTargetY = y;
         
