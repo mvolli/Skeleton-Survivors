@@ -146,7 +146,7 @@ class AssetManager {
             'gfx/Bat2.png', 
             'gfx/Bat3.png',
             'gfx/Bat4.png'
-        ], 350); // 350ms per frame for slower, more natural flight
+        ], 500); // 500ms per frame for much slower, calmer flight
     }
     
     getAnimation(name) {
@@ -204,7 +204,7 @@ class GothicBackground {
                 size: Math.random() * 2 + 1,
                 life: Math.random(),
                 maxLife: Math.random() * 3000 + 2000,
-                color: Math.random() > 0.5 ? '#4ecdc4' : '#f39c12'
+                color: 'rgba(200, 210, 200, 0.3)' // Subtle nature particles
             });
         }
     }
@@ -267,15 +267,15 @@ class GothicBackground {
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
         
-        // Render atmospheric particles
-        ctx.globalAlpha = 0.3;
+        // Render atmospheric particles (very subtle)
+        ctx.globalAlpha = 0.1;
         this.particles.forEach(particle => {
             const x = particle.x - scrollX * 0.1;
             const y = particle.y - scrollY * 0.1;
             
-            ctx.fillStyle = 'rgba(180, 200, 180, 0.4)';
+            ctx.fillStyle = 'rgba(200, 210, 200, 0.2)';
             ctx.beginPath();
-            ctx.arc(x, y, particle.size, 0, Math.PI * 2);
+            ctx.arc(x, y, particle.size * 0.5, 0, Math.PI * 2);
             ctx.fill();
         });
         
@@ -321,29 +321,13 @@ class GothicBackground {
     
     // Render world-aligned grid that provides consistent map reference
     renderWorldGrid(ctx, scrollX, scrollY) {
-        // Main tile grid (matches 512x512 tile boundaries)
-        ctx.globalAlpha = 0.08;
-        ctx.strokeStyle = 'rgba(120, 140, 120, 0.3)';
-        ctx.lineWidth = 2;
+        // Main tile grid (matches 512x512 tile boundaries) - very subtle
+        ctx.globalAlpha = 0.03;
+        ctx.strokeStyle = 'rgba(100, 110, 100, 0.15)';
+        ctx.lineWidth = 1;
         
         const tileSize = 512;
         this.renderGridLines(ctx, scrollX, scrollY, tileSize);
-        
-        // Secondary grid (smaller divisions for more detailed reference)
-        ctx.globalAlpha = 0.04;
-        ctx.strokeStyle = 'rgba(100, 120, 100, 0.2)';
-        ctx.lineWidth = 1;
-        
-        const subGridSize = 128; // 4 subdivisions per tile
-        this.renderGridLines(ctx, scrollX, scrollY, subGridSize);
-        
-        // Optional: Major grid lines every 4 tiles for large-scale navigation
-        ctx.globalAlpha = 0.12;
-        ctx.strokeStyle = 'rgba(140, 160, 140, 0.4)';
-        ctx.lineWidth = 3;
-        
-        const majorGridSize = 2048; // Every 4 tiles
-        this.renderGridLines(ctx, scrollX, scrollY, majorGridSize);
     }
     
     // Helper method to render grid lines at specific spacing
@@ -1981,7 +1965,7 @@ class BatEnemy {
         this.diveTimer = 0;
         this.diveInterval = 3000 + Math.random() * 2000; // 3-5 seconds between dives
         this.isDiving = false;
-        this.diveSpeed = 320; // Faster, more aggressive dive attacks
+        this.diveSpeed = 450; // Much faster, very aggressive dive attacks
         this.diveTargetX = x;
         this.diveTargetY = y;
         
