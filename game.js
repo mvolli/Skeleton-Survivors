@@ -146,7 +146,7 @@ class AssetManager {
             'gfx/Bat2.png', 
             'gfx/Bat3.png',
             'gfx/Bat4.png'
-        ], 150); // 150ms per frame for smooth flight
+        ], 200); // 200ms per frame for smooth flight
     }
     
     getAnimation(name) {
@@ -1277,12 +1277,45 @@ class Game {
         }
         
         const EnemyClass = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-        const enemy = new EnemyClass(x, y, this.assets);
         
-        // Apply comprehensive enemy scaling
-        this.applyEnemyScaling(enemy);
+        // Special group spawning for bats
+        if (EnemyClass === BatEnemy) {
+            this.spawnBatGroup(x, y);
+        } else {
+            const enemy = new EnemyClass(x, y, this.assets);
+            
+            // Apply comprehensive enemy scaling
+            this.applyEnemyScaling(enemy);
+            
+            this.enemies.push(enemy);
+        }
+    }
+    
+    spawnBatGroup(centerX, centerY) {
+        // Spawn 1-9 bats in a group
+        const groupSize = Math.floor(Math.random() * 9) + 1; // 1 to 9 bats
         
-        this.enemies.push(enemy);
+        for (let i = 0; i < groupSize; i++) {
+            // Arrange bats in a rough circle around the center point
+            const angle = (i / groupSize) * Math.PI * 2;
+            const distance = 30 + Math.random() * 50; // 30-80 pixels from center
+            
+            const x = centerX + Math.cos(angle) * distance;
+            const y = centerY + Math.sin(angle) * distance;
+            
+            const bat = new BatEnemy(x, y, this.assets);
+            
+            // Apply comprehensive enemy scaling
+            this.applyEnemyScaling(bat);
+            
+            // Add slight variation to make bats feel more natural
+            bat.swayOffset += Math.random() * Math.PI; // Random sway phase
+            bat.diveInterval += Math.random() * 1000 - 500; // ±500ms dive timing variation
+            
+            this.enemies.push(bat);
+        }
+        
+        console.log(`Spawned bat group of ${groupSize} bats`);
     }
     
     triggerBossWarning() {
@@ -1933,7 +1966,7 @@ class BatEnemy {
         this.maxHealth = 35;
         this.scoreValue = 12;
         this.expValue = 10;
-        this.scale = 0.8; // Smaller scale
+        this.scale = 0.4; // Smaller scale
         
         // Flying behavior properties
         this.swayAmplitude = 30; // How much it sways side to side
