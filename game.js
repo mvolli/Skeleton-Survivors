@@ -719,7 +719,11 @@ class Game {
     }
     
     showPauseMenu() {
-        document.getElementById('pauseMenu').style.display = 'flex';
+        const pauseMenu = document.getElementById('pauseMenu');
+        pauseMenu.style.display = 'flex';
+        // Force reflow to ensure the element is visible before adding animation class
+        pauseMenu.offsetHeight;
+        pauseMenu.classList.add('show');
         this.updatePauseMenuContent();
     }
     
@@ -793,7 +797,12 @@ class Game {
     }
     
     hidePauseMenu() {
-        document.getElementById('pauseMenu').style.display = 'none';
+        const pauseMenu = document.getElementById('pauseMenu');
+        pauseMenu.classList.remove('show');
+        // Wait for animation to complete before hiding
+        setTimeout(() => {
+            pauseMenu.style.display = 'none';
+        }, 300); // Match CSS transition duration
     }
     
     update(deltaTime) {

@@ -589,77 +589,197 @@
             display: none;
         }
         
-        /* Pause Menu Styles */
+        /* Pause Menu Styles - Optimized */
         #pauseMenu {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.95);
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        #pauseMenu.show {
+            opacity: 1;
         }
         
         #pauseContent {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            border: 2px solid #4ecdc4;
-            border-radius: 15px;
-            padding: 30px;
+            background: rgba(30, 60, 114, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            border-radius: 20px;
+            padding: 24px;
             color: white;
             text-align: center;
-            max-width: 600px;
-            max-height: 80vh;
+            max-width: 90vw;
+            max-height: 85vh;
             overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            transform: scale(0.9);
+            transition: transform 0.3s ease-in-out;
+            width: min(600px, 90vw);
         }
         
-        .pause-stats, .powerup-status, .weapon-status {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
+        #pauseMenu.show #pauseContent {
+            transform: scale(1);
+        }
+        
+        #pauseContent h2 {
+            font-size: 2rem;
+            margin: 0 0 24px 0;
+            color: #4ecdc4;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        #pauseContent h3 {
+            font-size: 1.2rem;
+            margin: 0 0 16px 0;
+            color: #f39c12;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .pause-section {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(78, 205, 196, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(78, 205, 196, 0.2);
+            border-radius: 8px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            display: block;
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+        
+        .stat-value {
+            display: block;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #4ecdc4;
         }
         
         .powerup-list, .weapon-list {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 8px;
+            margin-top: 16px;
+            max-height: 200px;
+            overflow-y: auto;
         }
         
         .powerup-item, .weapon-item {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid #4ecdc4;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(78, 205, 196, 0.2);
             border-radius: 8px;
             padding: 10px;
             text-align: left;
+            transition: background 0.2s ease;
+        }
+        
+        .powerup-item:hover, .weapon-item:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(78, 205, 196, 0.4);
         }
         
         .powerup-item h4, .weapon-item h4 {
-            margin: 0 0 5px 0;
+            margin: 0 0 4px 0;
             color: #f39c12;
+            font-size: 0.95rem;
         }
         
         .powerup-item p, .weapon-item p {
             margin: 0;
-            font-size: 12px;
-            opacity: 0.8;
+            font-size: 0.8rem;
+            opacity: 0.85;
+            line-height: 1.3;
         }
         
         .pause-actions {
-            margin-top: 20px;
+            margin-top: 24px;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
         
         .pause-actions .btn {
-            margin: 10px;
+            margin: 0;
+            min-width: 140px;
+            padding: 12px 20px;
+            font-size: 1rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .pause-actions .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            #pauseContent {
+                padding: 20px;
+                margin: 20px;
+            }
+            
+            #pauseContent h2 {
+                font-size: 1.5rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 8px;
+            }
+            
+            .powerup-list, .weapon-list {
+                grid-template-columns: 1fr;
+                max-height: 150px;
+            }
+            
+            .pause-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .pause-actions .btn {
+                width: 100%;
+                max-width: 200px;
+            }
         }
     </style>
 </head>
 <body>
     <div id="mainMenu">
-        <div class="version-number">v0.4.3</div>
+        <div class="version-number">v0.4.4</div>
         <div id="menuContent">
             <h1>🦴 Skeleton Survivors 🦴</h1>
             
@@ -894,7 +1014,7 @@
         <div id="pauseContent">
             <h2>⏸️ Game Paused</h2>
             
-            <div class="pause-stats">
+            <div class="pause-section pause-stats">
                 <h3>📊 Current Status</h3>
                 <div class="stats-grid">
                     <div class="stat-item">
@@ -912,14 +1032,14 @@
                 </div>
             </div>
             
-            <div class="powerup-status">
+            <div class="pause-section powerup-status">
                 <h3>⚡ Active Powerups</h3>
                 <div id="activePowerups" class="powerup-list">
                     <!-- Dynamically populated -->
                 </div>
             </div>
             
-            <div class="weapon-status">
+            <div class="pause-section weapon-status">
                 <h3>⚔️ Weapons</h3>
                 <div id="pauseWeapons" class="weapon-list">
                     <!-- Dynamically populated -->
