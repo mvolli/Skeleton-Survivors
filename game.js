@@ -588,7 +588,6 @@ class ScreenShake {
 
 class Game {
     constructor(saveManager = null) {
-        this.VERSION = "v0.4.3"; // Game version
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.canvas.width = window.innerWidth;
