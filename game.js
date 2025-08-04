@@ -471,6 +471,13 @@ class ParticleSystem {
     }
     
     addExplosion(x, y, count = 10, options = {}) {
+        // Limit particles for performance
+        const maxParticles = options.maxTotal || 100;
+        if (this.particles.length >= maxParticles) {
+            // Remove oldest particles if at limit
+            this.particles.splice(0, count);
+        }
+        
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
             const speed = 100 + Math.random() * 200;
@@ -613,6 +620,17 @@ class Game {
         this.isGameOver = false;
         this.isPaused = false;
         
+        // Performance optimization settings
+        this.performanceMode = false; // Can be toggled by user
+        this.maxEnemies = 150; // Limit enemy count for performance
+        this.maxParticles = 100; // Limit particle count
+        this.cullDistance = 1200; // Cull entities beyond this distance
+        
+        // Cursor-based aiming
+        this.cursorAiming = false; // Can be toggled by user
+        this.mouseX = 0;
+        this.mouseY = 0;
+        
         this.camera = { x: 0, y: 0 };
         this.scrollOffset = { x: 0, y: 0 }; // For background scrolling
         this.lastTime = 0;
@@ -663,6 +681,18 @@ class Game {
                 this.togglePause();
                 e.preventDefault();
             }
+            
+            // Handle performance mode toggle
+            if (e.key.toLowerCase() === 'f') {
+                this.togglePerformanceMode();
+                e.preventDefault();
+            }
+            
+            // Handle cursor aiming toggle
+            if (e.key.toLowerCase() === 'c') {
+                this.toggleCursorAiming();
+                e.preventDefault();
+            }
         });
         
         document.addEventListener('keyup', (e) => {
@@ -692,6 +722,13 @@ class Game {
             if (document.hidden && !this.isPaused && !this.isGameOver) {
                 this.togglePause();
             }
+        });
+        
+        // Mouse movement for cursor aiming
+        this.canvas.addEventListener('mousemove', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left;
+            this.mouseY = e.clientY - rect.top;
         });
     }
     
@@ -841,9 +878,9 @@ class Game {
             console.log('Zombies have awakened!');
         }
         
-        // Spawn enemies
+        // Spawn enemies (with performance limiting)
         this.enemySpawnTimer += deltaTime;
-        if (this.enemySpawnTimer >= this.enemySpawnRate) {
+        if (this.enemySpawnTimer >= this.enemySpawnRate && this.enemies.length < this.maxEnemies) {
             this.spawnEnemy();
             this.enemySpawnTimer = 0;
             
@@ -913,8 +950,18 @@ class Game {
             }
         }
         
-        // Update enemies
-        this.enemies.forEach(enemy => {
+        // Update enemies (with culling for performance)
+        this.enemies = this.enemies.filter(enemy => {
+            // Cull distant enemies to improve performance
+            const dx = enemy.x - this.player.x;
+            const dy = enemy.y - this.player.y;
+            const distanceSquared = dx * dx + dy * dy;
+            const cullDistanceSquared = this.cullDistance * this.cullDistance;
+            
+            if (distanceSquared > cullDistanceSquared) {
+                return false; // Remove distant enemy
+            }
+            
             enemy.update(deltaTime, this.player);
             
             // Check collision with player
@@ -930,6 +977,8 @@ class Game {
                 this.player.takeDamage(damage);
                 enemy.health = 0; // Kill enemy on hit
             }
+            
+            return enemy.health > 0; // Keep alive enemies
         });
         
         // Update projectiles
@@ -1053,8 +1102,11 @@ class Game {
         const allTargets = [...this.enemies];
         if (this.currentBoss) allTargets.push(this.currentBoss);
         
+        // Get cursor position for aiming if enabled
+        const cursorTarget = this.cursorAiming ? this.getCursorTarget() : null;
+        
         this.player.weapons.forEach(weapon => {
-            weapon.update(deltaTime, allTargets, this.projectiles, this.player);
+            weapon.update(deltaTime, allTargets, this.projectiles, this.player, cursorTarget);
         });
         
         // Check for level up
@@ -1093,7 +1145,7 @@ class Game {
         // Draw game objects
         this.particles.forEach(particle => particle.render(this.ctx));
         this.particleSystem.render(this.ctx);
-        this.items.forEach(item => item.render(this.ctx));
+        this.items.forEach(item => item.render(this.ctx, this.player));
         this.enemies.forEach(enemy => enemy.render(this.ctx));
         
         // Draw boss
@@ -1456,8 +1508,44 @@ class Game {
     checkCollision(obj1, obj2) {
         const dx = obj1.x - obj2.x;
         const dy = obj1.y - obj2.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance < (obj1.radius + obj2.radius);
+        const distanceSquared = dx * dx + dy * dy;
+        const radiusSum = obj1.radius + obj2.radius;
+        return distanceSquared < (radiusSum * radiusSum);
+    }
+    
+    getCursorTarget() {
+        // Convert screen coordinates to world coordinates
+        const worldX = this.mouseX - this.canvas.width / 2 + this.camera.x;
+        const worldY = this.mouseY - this.canvas.height / 2 + this.camera.y;
+        
+        return {
+            x: worldX,
+            y: worldY,
+            radius: 0 // Virtual target point
+        };
+    }
+    
+    togglePerformanceMode() {
+        this.performanceMode = !this.performanceMode;
+        
+        if (this.performanceMode) {
+            // Reduce limits for better performance
+            this.maxEnemies = 100;
+            this.maxParticles = 50;
+            this.cullDistance = 800;
+            console.log('Performance Mode ON - Reduced enemy/particle limits');
+        } else {
+            // Restore normal limits
+            this.maxEnemies = 150;
+            this.maxParticles = 100;
+            this.cullDistance = 1200;
+            console.log('Performance Mode OFF - Normal limits restored');
+        }
+    }
+    
+    toggleCursorAiming() {
+        this.cursorAiming = !this.cursorAiming;
+        console.log(this.cursorAiming ? 'Cursor Aiming ON' : 'Cursor Aiming OFF');
     }
     
     createHitParticles(x, y) {
@@ -4173,10 +4261,35 @@ class ExperienceOrb {
         }
     }
     
-    render(ctx) {
+    render(ctx, player = null) {
         const bobY = Math.sin(this.age * this.bobSpeed + this.bobOffset) * 3;
         
+        // Add glow effect when player is nearby
+        let glowIntensity = 0;
+        if (player) {
+            const dx = this.x - player.x;
+            const dy = this.y - player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < 120) { // Within pickup magnetism range
+                glowIntensity = Math.max(0, (120 - distance) / 120);
+            }
+        }
+        
         ctx.save();
+        
+        // Draw outer glow when nearby
+        if (glowIntensity > 0) {
+            ctx.shadowColor = '#f39c12';
+            ctx.shadowBlur = 15 * glowIntensity;
+            ctx.fillStyle = `rgba(243, 156, 18, ${0.3 * glowIntensity})`;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y + bobY, this.radius + 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Draw main orb
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
         ctx.fillStyle = '#f39c12';
         ctx.beginPath();
         ctx.arc(this.x, this.y + bobY, this.radius, 0, Math.PI * 2);
@@ -4219,15 +4332,37 @@ class HealthPickup {
         }
     }
     
-    render(ctx) {
+    render(ctx, player = null) {
         const bobY = Math.sin(this.age * this.bobSpeed + this.bobOffset) * 2;
         const pulse = Math.sin(this.pulsePhase) * 0.2 + 1;
+        
+        // Add glow effect when player is nearby
+        let glowIntensity = 0;
+        if (player) {
+            const dx = this.x - player.x;
+            const dy = this.y - player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < 80) { // Within pickup magnetism range
+                glowIntensity = Math.max(0, (80 - distance) / 80);
+            }
+        }
         
         ctx.save();
         ctx.translate(this.x, this.y + bobY);
         ctx.scale(pulse, pulse);
         
+        // Draw outer glow when nearby
+        if (glowIntensity > 0) {
+            ctx.shadowColor = '#e74c3c';
+            ctx.shadowBlur = 12 * glowIntensity;
+            ctx.fillStyle = `rgba(231, 76, 60, ${0.4 * glowIntensity})`;
+            ctx.fillRect(-8, -3, 16, 6);
+            ctx.fillRect(-3, -8, 6, 16);
+        }
+        
         // Draw red cross
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
         ctx.fillStyle = '#e74c3c';
         ctx.fillRect(-6, -2, 12, 4);
         ctx.fillRect(-2, -6, 4, 12);
@@ -4272,15 +4407,42 @@ class DiamondPickup {
         }
     }
     
-    render(ctx) {
+    render(ctx, player = null) {
         const bobY = Math.sin(this.age * this.bobSpeed + this.bobOffset) * 4;
         const sparkle = Math.sin(this.sparklePhase) * 0.3 + 0.7;
+        
+        // Add glow effect when player is nearby
+        let glowIntensity = 0;
+        if (player) {
+            const dx = this.x - player.x;
+            const dy = this.y - player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < 100) { // Within pickup magnetism range
+                glowIntensity = Math.max(0, (100 - distance) / 100);
+            }
+        }
         
         ctx.save();
         ctx.translate(this.x, this.y + bobY);
         ctx.rotate(this.age);
         
+        // Draw outer glow when nearby
+        if (glowIntensity > 0) {
+            ctx.shadowColor = '#00bfff';
+            ctx.shadowBlur = 20 * glowIntensity;
+            ctx.fillStyle = `rgba(0, 191, 255, ${0.2 * glowIntensity})`;
+            ctx.beginPath();
+            ctx.moveTo(0, -12);
+            ctx.lineTo(9, 0);
+            ctx.lineTo(0, 12);
+            ctx.lineTo(-9, 0);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
         // Draw diamond shape
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
         ctx.fillStyle = `rgba(0, 191, 255, ${sparkle})`;
         ctx.beginPath();
         ctx.moveTo(0, -8);

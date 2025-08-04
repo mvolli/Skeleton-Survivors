@@ -44,6 +44,8 @@ A fast-paced bullet hell survivor game built with HTML5 Canvas and JavaScript. F
 - **WASD** or **Arrow Keys**: Move your character
 - **Weapons**: Auto-fire at nearest enemies
 - **P** or **Escape**: Manually pause/unpause the game
+- **F**: Toggle performance mode (reduces enemy/particle limits)
+- **C**: Toggle cursor-based aiming mode
 - **Auto-Pause**: Game automatically pauses when window loses focus
 
 ## 🚀 Getting Started
@@ -93,10 +95,18 @@ Game includes custom sprite animations and visual effects:
 
 ## 📜 Version History
 
-### v0.4.3 (Current)
-- ✅ **Auto-Pause Feature**: Game automatically pauses when window loses focus or tab switches
-- ✅ **Focus Management**: Prevents accidental gameplay when switching applications
-- ✅ **Enhanced UX**: Manual pause controls (P/Escape) still available
+### v0.5.0 (Current) - Major QoL Update
+- ✅ **Performance Optimization**: Improved late-game performance with enemy/particle limits and culling
+- ✅ **Cursor-Based Aiming**: Optional cursor targeting mode (C key)
+- ✅ **Enhanced Loot Indicators**: Colored glow effects when items are within pickup range
+- ✅ **Performance Mode Toggle**: F key to reduce limits for better FPS on lower-end devices
+- ✅ **Optimized Collision Detection**: Faster collision calculations using squared distance
+
+### v0.4.4
+- Enhanced pause screen UI/UX with glassmorphism design and smooth animations
+
+### v0.4.3
+- Auto-pause feature when game window loses focus or tab switches
 
 ### v0.4.2
 - Enhanced boss mechanics with proper health scaling
@@ -109,6 +119,11 @@ Game includes custom sprite animations and visual effects:
 ## 🔧 Development Status
 
 ### ✅ Completed Features
+- [x] Performance optimization for late-game (v0.5.0)
+- [x] Cursor-based aiming mode toggle (v0.5.0)
+- [x] Enhanced loot indicators with proximity glow (v0.5.0)
+- [x] Performance mode toggle for low-end devices (v0.5.0)
+- [x] Optimized pause screen UI/UX (v0.4.4)
 - [x] Auto-pause on window focus loss (v0.4.3)
 - [x] Manual pause controls (P/Escape)
 - [x] 8 weapon types with unique mechanics
@@ -116,7 +131,6 @@ Game includes custom sprite animations and visual effects:
 - [x] Boss system with 2 unique bosses
 - [x] Meta progression with 12 permanent upgrades
 - [x] Multiple save slots system
-- [x] Responsive design and performance optimization
 
 ### 🚧 Planned Features
 - [ ] Additional weapon types
