@@ -588,6 +588,7 @@ class ScreenShake {
 
 class Game {
     constructor(saveManager = null) {
+        this.VERSION = "v0.4.3"; // Game version
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.canvas.width = window.innerWidth;
@@ -5648,7 +5649,7 @@ class PowerupManager {
 class SaveManager {
     constructor() {
         this.currentSlot = null;
-        this.SAVE_VERSION = "1.2.0"; // Current save format version
+        this.SAVE_VERSION = "1.1.0"; // Current save format version
         this.loadMetaProgression();
     }
     
