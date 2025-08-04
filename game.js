@@ -674,6 +674,25 @@ class Game {
             this.canvas.height = window.innerHeight;
             this.background.resize(window.innerWidth, window.innerHeight);
         });
+        
+        // Auto-pause when window loses focus
+        window.addEventListener('blur', () => {
+            if (!this.gameState.isPaused && this.gameState.isRunning) {
+                this.togglePause();
+            }
+        });
+        
+        // Auto-resume when window gains focus (optional - user can manually unpause)
+        window.addEventListener('focus', () => {
+            // User can manually unpause if they want to continue
+        });
+        
+        // Handle page visibility changes (tab switching)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && !this.gameState.isPaused && this.gameState.isRunning) {
+                this.togglePause();
+            }
+        });
     }
     
     gameLoop() {
