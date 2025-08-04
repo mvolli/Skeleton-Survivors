@@ -5648,7 +5648,7 @@ class PowerupManager {
 class SaveManager {
     constructor() {
         this.currentSlot = null;
-        this.SAVE_VERSION = "1.1.0"; // Current save format version
+        this.SAVE_VERSION = "1.2.0"; // Current save format version
         this.loadMetaProgression();
     }
     
