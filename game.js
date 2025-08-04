@@ -677,7 +677,7 @@ class Game {
         
         // Auto-pause when window loses focus
         window.addEventListener('blur', () => {
-            if (!this.gameState.isPaused && this.gameState.isRunning) {
+            if (!this.isPaused && !this.isGameOver) {
                 this.togglePause();
             }
         });
@@ -689,7 +689,7 @@ class Game {
         
         // Handle page visibility changes (tab switching)
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden && !this.gameState.isPaused && this.gameState.isRunning) {
+            if (document.hidden && !this.isPaused && !this.isGameOver) {
                 this.togglePause();
             }
         });
