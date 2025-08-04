@@ -43,7 +43,8 @@ A fast-paced bullet hell survivor game built with HTML5 Canvas and JavaScript. F
 
 - **WASD** or **Arrow Keys**: Move your character
 - **Weapons**: Auto-fire at nearest enemies
-- **Pause**: Game pauses during level-up screens
+- **P** or **Escape**: Manually pause/unpause the game
+- **Auto-Pause**: Game automatically pauses when window loses focus
 
 ## 🚀 Getting Started
 
@@ -92,13 +93,44 @@ Game includes custom sprite animations and visual effects:
 
 ## 📜 Version History
 
-### Latest Release
+### v0.4.3 (Current)
+- ✅ **Auto-Pause Feature**: Game automatically pauses when window loses focus or tab switches
+- ✅ **Focus Management**: Prevents accidental gameplay when switching applications
+- ✅ **Enhanced UX**: Manual pause controls (P/Escape) still available
+
+### v0.4.2
 - Enhanced boss mechanics with proper health scaling
 - 4 new weapons with unique projectile systems
 - 4 new powerups with combat integration
 - Expanded meta progression (12 total upgrades)
 - Improved balance and difficulty scaling
 - Fixed boss targeting and invincibility systems
+
+## 🔧 Development Status
+
+### ✅ Completed Features
+- [x] Auto-pause on window focus loss (v0.4.3)
+- [x] Manual pause controls (P/Escape)
+- [x] 8 weapon types with unique mechanics
+- [x] 12 powerup categories with stacking effects
+- [x] Boss system with 2 unique bosses
+- [x] Meta progression with 12 permanent upgrades
+- [x] Multiple save slots system
+- [x] Responsive design and performance optimization
+
+### 🚧 Planned Features
+- [ ] Additional weapon types
+- [ ] New enemy varieties
+- [ ] Achievement system
+- [ ] Sound effects and music
+- [ ] Mobile touch controls
+- [ ] Leaderboard system
+- [ ] Additional boss encounters
+
+### 🐛 Known Issues
+- [ ] Performance optimization for large enemy counts
+- [ ] Mobile responsiveness improvements
+- [ ] Save system edge case handling
 
 ## 🤝 Contributing
 
