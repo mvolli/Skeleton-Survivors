@@ -705,9 +705,12 @@ class Game {
             this.background.resize(window.innerWidth, window.innerHeight);
         });
         
-        // Auto-pause when window loses focus
+        // Auto-pause when window loses focus (only during gameplay)
         window.addEventListener('blur', () => {
-            if (!this.isPaused && !this.isGameOver) {
+            const gameCanvas = document.getElementById('gameCanvas');
+            const isInGame = gameCanvas && gameCanvas.style.display !== 'none';
+            
+            if (isInGame && !this.isPaused && !this.isGameOver) {
                 this.togglePause();
             }
         });
@@ -717,9 +720,12 @@ class Game {
             // User can manually unpause if they want to continue
         });
         
-        // Handle page visibility changes (tab switching)
+        // Handle page visibility changes (tab switching) - only during gameplay
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden && !this.isPaused && !this.isGameOver) {
+            const gameCanvas = document.getElementById('gameCanvas');
+            const isInGame = gameCanvas && gameCanvas.style.display !== 'none';
+            
+            if (document.hidden && isInGame && !this.isPaused && !this.isGameOver) {
                 this.togglePause();
             }
         });
@@ -6264,21 +6270,85 @@ function purchaseUpgrade(type) {
 
 function returnToMenu() {
     if (game && saveManager.currentSlot) {
-        // Save game data including diamonds
+        // Save game data including diamonds and meta progression
         saveManager.save(saveManager.currentSlot, game);
         
         // Hide pause menu and reset pause state
         game.hidePauseMenu();
         game.isPaused = false;
+        
+        // Properly clean up the current game state
+        // Clear all game arrays and reset timers
+        game.enemies.length = 0;
+        game.projectiles.length = 0;
+        game.particles.length = 0;
+        game.items.length = 0;
+        
+        // Reset game state variables
+        game.gameTime = 0;
+        game.score = 0;
+        game.level = 1;
+        game.experience = 0;
+        game.experienceToNext = 100;
+        game.diamonds = 0;
+        game.isGameOver = false;
+        game.isPaused = false;
+        
+        // Reset spawn timers
+        game.enemySpawnTimer = 0;
+        game.bossSpawnTimer = 0;
+        game.bossesDefeated = 0;
+        game.difficultyMultiplier = 1.0;
+        game.zombiesUnlocked = false;
+        
+        // Reset boss and warning states
+        game.currentBoss = null;
+        game.bossWarning = null;
+        game.bossWarningTimer = 0;
+        
+        // Reset player to initial state (preserving meta upgrades)
+        if (game.player) {
+            game.player.x = 0;
+            game.player.y = 0;
+            game.player.health = game.player.maxHealth;
+            game.player.weapons = [new BasicWeapon()];
+            game.player.level = 1;
+            game.player.experience = 0;
+            game.player.experienceToNext = 100;
+        }
+        
+        // Clear particle systems
+        if (game.particleSystem) {
+            game.particleSystem.particles.length = 0;
+        }
+        
+        // Reset background and screen shake
+        if (game.background) {
+            game.background.gameIntensity = 0;
+            game.background.warningIntensity = 0;
+        }
+        if (game.screenShake) {
+            game.screenShake.intensity = 0;
+            game.screenShake.duration = 0;
+        }
     }
     
-    document.getElementById('characterMenu').style.display = 'flex';
+    // Hide all game-related UI elements
     document.getElementById('gameCanvas').style.display = 'none';
     document.getElementById('gameOver').style.display = 'none';
     document.getElementById('ui').style.display = 'none';
+    document.getElementById('pauseMenu').style.display = 'none';
     
-    // Update character stats and all slot displays
-    saveManager.updateCharacterStats(saveManager.currentSlot);
+    // Return to main menu (not character menu) for consistency
+    document.getElementById('mainMenu').style.display = 'flex';
+    document.getElementById('characterMenu').style.display = 'none';
+    
+    // Clear current slot selection to force re-selection
+    if (saveManager) {
+        saveManager.currentSlot = null;
+    }
+    
+    // Update all slot displays to reflect any earned diamonds/progress
     for (let i = 1; i <= 3; i++) {
         saveManager.updateSlotDisplay(i);
     }
