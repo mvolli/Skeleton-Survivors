@@ -5717,13 +5717,9 @@ class PowerupManager {
                 break;
             case "multishot":
                 player.multishot += powerup.value;
-                // Enable multishot on first pickup, and apply any stored meta upgrades
+                // Enable multishot on first pickup
                 if (!player.hasMultishotUpgrade) {
                     player.hasMultishotUpgrade = true;
-                    // Apply stored meta multishot upgrades now that multishot is unlocked
-                    if (player.metaMultishot) {
-                        player.multishot += player.metaMultishot;
-                    }
                 }
                 break;
             case "regen":
